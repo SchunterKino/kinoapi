@@ -1,5 +1,5 @@
 package de.schunterkino.kinoapi.dolby;
 
 public enum Commands {
-	None, GetVolume, IncreaseVolume, DecreaseVolume
+	None, GetVolume, SetVolume, IncreaseVolume, DecreaseVolume
 }

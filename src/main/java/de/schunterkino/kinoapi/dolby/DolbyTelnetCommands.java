@@ -11,36 +11,70 @@ import org.apache.commons.net.telnet.TelnetClient;
 
 public class DolbyTelnetCommands implements Runnable {
 
+	private class CommandContainer {
+		public Commands cmd;
+		public int value;
+
+		public CommandContainer(Commands cmd) {
+			this.cmd = cmd;
+			this.value = 0;
+		}
+
+		public CommandContainer(Commands cmd, int value) {
+			this.cmd = cmd;
+			this.value = value;
+		}
+	}
+
+	private final CommandContainer noneCommand = new CommandContainer(Commands.None);
+
 	private TelnetClient telnetClient;
 	private boolean stop;
-	private LinkedList<Commands> commandQueue;
-	private Commands currentCommand;
+	private LinkedList<CommandContainer> commandQueue;
+	private CommandContainer currentCommand;
 	private Pattern faderPattern;
+	private int volume;
+
+	private LinkedList<IDolbyStatusUpdateReceiver> listeners;
 
 	public DolbyTelnetCommands(TelnetClient telnetClient) {
 		this.telnetClient = telnetClient;
-		this.stop = false;
-		this.commandQueue = new LinkedList<>();
-		this.currentCommand = Commands.None;
 		this.faderPattern = Pattern.compile("cp750\\.sys\\.fader (\\d+)");
+		this.commandQueue = new LinkedList<>();
+		this.listeners = new LinkedList<>();
+	}
+
+	public void reset() {
+		stop = false;
+		commandQueue.clear();
+		currentCommand = noneCommand;
+		volume = -1;
 	}
 
 	@Override
 	public void run() {
 
+		// Notify listeners.
+		synchronized (listeners) {
+			for (IDolbyStatusUpdateReceiver listener : listeners) {
+				listener.onDolbyConnected();
+			}
+		}
+
+		// Go in a loop to
 		try {
 			DataOutputStream out = new DataOutputStream(telnetClient.getOutputStream());
 			do {
 
 				// We're waiting on a response for that command. See if there's
 				// something here.
-				if (currentCommand != Commands.None) {
+				if (currentCommand.cmd != Commands.None) {
 					String ret = read();
 					// Nothing yet. Keep waiting.
 					if (ret == null)
 						continue;
 
-					switch (currentCommand) {
+					switch (currentCommand.cmd) {
 					case GetVolume:
 						// Parse the response
 						Matcher matcher = faderPattern.matcher(ret);
@@ -49,18 +83,18 @@ public class DolbyTelnetCommands implements Runnable {
 							String volume = matcher.group(1);
 							if (volume != null) {
 								updateVolumeValue(Integer.parseInt(volume));
-								currentCommand = Commands.None;
+								currentCommand = noneCommand;
 							}
 						}
 						break;
 					default:
-						currentCommand = Commands.None;
+						currentCommand = noneCommand;
 						break;
 					}
 				}
 
 				// See if someone wanted to send some command.
-				currentCommand = Commands.None;
+				currentCommand = noneCommand;
 				synchronized (commandQueue) {
 					if (!commandQueue.isEmpty())
 						currentCommand = commandQueue.removeFirst();
@@ -70,33 +104,64 @@ public class DolbyTelnetCommands implements Runnable {
 				// current command is None.
 
 				// Send the right command now.
-				switch (currentCommand) {
+				switch (currentCommand.cmd) {
 				case None:
 					break;
 				case GetVolume:
 					out.writeUTF("cp750.sys.fader ?");
 					break;
+				case SetVolume:
+					out.writeUTF("cp750.sys.fader " + currentCommand.value);
+					break;
 				case IncreaseVolume:
-					// FIXME: Lookup correct command again.
-					out.writeUTF("cp750.sys.fader +1");
+					out.writeUTF("cp750.ctrl.fader_delta 1");
 					break;
 				case DecreaseVolume:
-					// FIXME: Lookup correct command again.
-					out.writeUTF("cp750.sys.fader -1");
+					out.writeUTF("cp750.ctrl.fader_delta -1");
 					break;
 				}
+
+				// Wait a bit until processing the next command.
+				Thread.sleep(500);
 			} while (!stop);
-		} catch (IOException e) {
+		} catch (IOException | InterruptedException e) {
 			if (!stop)
 				e.printStackTrace();
+		}
+
+		// Notify listeners.
+		synchronized (listeners) {
+			for (IDolbyStatusUpdateReceiver listener : listeners) {
+				listener.onDolbyDisconnected();
+			}
 		}
 	}
 
 	public void increaseVolume() {
 		synchronized (commandQueue) {
-			commandQueue.add(Commands.IncreaseVolume);
+			commandQueue.add(new CommandContainer(Commands.IncreaseVolume));
 			// Get the new volume right away afterwards.
-			commandQueue.add(Commands.GetVolume);
+			commandQueue.add(new CommandContainer(Commands.GetVolume));
+		}
+	}
+
+	public void decreaseVolume() {
+		synchronized (commandQueue) {
+			commandQueue.add(new CommandContainer(Commands.DecreaseVolume));
+			// Get the new volume right away afterwards.
+			commandQueue.add(new CommandContainer(Commands.GetVolume));
+		}
+	}
+
+	public int getVolume() {
+		return volume;
+	}
+
+	public void setVolume(int volume) {
+		synchronized (commandQueue) {
+			commandQueue.add(new CommandContainer(Commands.SetVolume, volume));
+			// Get the new volume right away afterwards.
+			commandQueue.add(new CommandContainer(Commands.GetVolume));
 		}
 	}
 
@@ -117,7 +182,20 @@ public class DolbyTelnetCommands implements Runnable {
 		stop = true;
 	}
 
+	public void registerListener(IDolbyStatusUpdateReceiver listener) {
+		synchronized (listeners) {
+			listeners.add(listener);
+		}
+	}
+
 	private void updateVolumeValue(int volume) {
-		// TODO Notify listeners.
+		this.volume = volume;
+
+		// Notify listeners.
+		synchronized (listeners) {
+			for (IDolbyStatusUpdateReceiver listener : listeners) {
+				listener.onVolumeChanged(volume);
+			}
+		}
 	}
 }

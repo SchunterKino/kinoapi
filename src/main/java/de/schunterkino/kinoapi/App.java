@@ -8,15 +8,25 @@ import de.schunterkino.kinoapi.dolby.DolbyWrapper;
 import de.schunterkino.kinoapi.websocket.CinemaWebSocketServer;
 
 public class App {
-	public static void main(String[] args) {
-		// Start the websocket server right away.
-		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer();
-		websocketServer.start();
-		System.out.println("WebSocket: Server created on port: " + websocketServer.getPort());
+	private final static int WEBSOCKET_PORT = 8641;
+	private final static String DOLBY_IP = "10.100.152.16";
+	private final static int DOLBY_PORT = 61408;
+	private final static String CHRISTIE_IMB_IP = "10.100.152.13";
+	private final static int CHRISTIE_IMB_PORT = 5111;
+	private final static String JNIOR_IP = "10.100.152.12";
+	private final static int JNIOR_PORT = 9200;
 
-		DolbyWrapper dolbyConnection = new DolbyWrapper();
+	public static void main(String[] args) {
+
+		// Setup the Dolby CP750 connection.
+		DolbyWrapper dolbyConnection = new DolbyWrapper(DOLBY_IP, DOLBY_PORT);
 		Thread dolbyThread = new Thread(dolbyConnection);
 		dolbyThread.start();
+
+		// Start the websocket server now.
+		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer(WEBSOCKET_PORT, dolbyConnection);
+		websocketServer.start();
+		System.out.println("WebSocket: Server created on port: " + websocketServer.getPort());
 
 		// Keep the server running forever.
 		BufferedReader sysin = new BufferedReader(new InputStreamReader(System.in));

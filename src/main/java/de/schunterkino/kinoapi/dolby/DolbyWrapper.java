@@ -11,19 +11,23 @@ import org.apache.commons.net.telnet.TerminalTypeOptionHandler;
 
 public class DolbyWrapper implements Runnable, TelnetNotificationHandler {
 
-	private final String DOLBY_IP = "10.100.152.16";
-	private final int DOLBY_PORT = 61408;
+	private String dolbyip;
+	private int dolbyport;
+	private TelnetClient telnetClient;
+	private DolbyTelnetCommands telnetCommands;
+	private boolean connected;
+	private boolean stop;
 
-	private TelnetClient telnetClient = null;
-	private DolbyTelnetCommands telnetCommands = null;
-	private boolean connected = false;
-	private boolean stop = false;
+	public DolbyWrapper(String ip, int port) {
+		dolbyip = ip;
+		dolbyport = port;
+		connected = false;
+		stop = false;
 
-	@Override
-	public void run() {
 		// Setup the telnet connection.
 		telnetClient = new TelnetClient();
 		telnetClient.setDefaultTimeout(5000);
+		telnetCommands = new DolbyTelnetCommands(telnetClient);
 
 		TerminalTypeOptionHandler ttopt = new TerminalTypeOptionHandler("VT100", false, false, true, false);
 		EchoOptionHandler echoopt = new EchoOptionHandler(true, false, true, false);
@@ -36,20 +40,23 @@ public class DolbyWrapper implements Runnable, TelnetNotificationHandler {
 		} catch (InvalidTelnetOptionException | IOException e) {
 			System.err.println("Error registering option handlers: " + e.getMessage());
 		}
+	}
 
+	@Override
+	public void run() {
 		// Connect! And keep trying to connect too.
 		while (!stop) {
 			try {
 				try {
-					telnetClient.connect(DOLBY_IP, DOLBY_PORT);
+					telnetClient.connect(dolbyip, dolbyport);
 					telnetClient.registerNotifHandler(this);
 
 					// Start a thread to handle telnet messages.
-					telnetCommands = new DolbyTelnetCommands(telnetClient);
+					telnetCommands.reset();
 					Thread readerThread = new Thread(telnetCommands);
 					readerThread.start();
 
-					System.out.printf("Dolby: Connected to %s:%d.%n", DOLBY_IP, DOLBY_PORT);
+					System.out.printf("Dolby: Connected to %s:%d.%n", dolbyip, dolbyport);
 					connected = true;
 
 					// Wait for the thread to be done.
@@ -131,6 +138,10 @@ public class DolbyWrapper implements Runnable, TelnetNotificationHandler {
 
 	public boolean isConnected() {
 		return connected;
+	}
+
+	public DolbyTelnetCommands getTelnetCommands() {
+		return telnetCommands;
 	}
 
 	public void stopServer() {
