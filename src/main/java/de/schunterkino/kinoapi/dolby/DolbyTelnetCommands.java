@@ -3,6 +3,8 @@ package de.schunterkino.kinoapi.dolby;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,6 +36,7 @@ public class DolbyTelnetCommands implements Runnable {
 	private CommandContainer currentCommand;
 	private Pattern faderPattern;
 	private int volume;
+	private Instant lastGetVolume;
 
 	private LinkedList<IDolbyStatusUpdateReceiver> listeners;
 
@@ -42,6 +45,7 @@ public class DolbyTelnetCommands implements Runnable {
 		this.faderPattern = Pattern.compile("cp750\\.sys\\.fader (\\d+)");
 		this.commandQueue = new LinkedList<>();
 		this.listeners = new LinkedList<>();
+		this.lastGetVolume = null;
 	}
 
 	public void reset() {
@@ -100,8 +104,15 @@ public class DolbyTelnetCommands implements Runnable {
 						currentCommand = commandQueue.removeFirst();
 				}
 
-				// TODO: Throw in a GetVolume command from time to time if the
+				// Throw in a GetVolume command from time to time if the
 				// current command is None.
+				if (currentCommand.cmd == Commands.None) {
+					// Get the current volume every 5 seconds.
+					// TODO: Increase the interval if no websocket clients are
+					// connected.
+					if (lastGetVolume == null || Duration.between(lastGetVolume, Instant.now()).toMillis() > 5000)
+						currentCommand = new CommandContainer(Commands.GetVolume);
+				}
 
 				// Send the right command now.
 				switch (currentCommand.cmd) {
@@ -109,6 +120,7 @@ public class DolbyTelnetCommands implements Runnable {
 					break;
 				case GetVolume:
 					out.writeUTF("cp750.sys.fader ?");
+					lastGetVolume = Instant.now();
 					break;
 				case SetVolume:
 					out.writeUTF("cp750.sys.fader " + currentCommand.value);
