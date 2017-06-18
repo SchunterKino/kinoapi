@@ -14,7 +14,7 @@ public class App {
 	private final static String CHRISTIE_IMB_IP = "10.100.152.13";
 	private final static int CHRISTIE_IMB_PORT = 5111;
 	private final static String JNIOR_IP = "10.100.152.12";
-	private final static int JNIOR_PORT = 9200;
+	private final static int JNIOR_PORT = 9202;
 
 	public static void main(String[] args) {
 
