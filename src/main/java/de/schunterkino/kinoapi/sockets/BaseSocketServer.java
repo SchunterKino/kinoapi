@@ -1,12 +1,17 @@
 package de.schunterkino.kinoapi.sockets;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.UnknownHostException;
 
 public class BaseSocketServer<T extends BaseSocketCommands<S>, S> implements Runnable {
 	private String ip;
 	private int port;
 	private String log_tag;
+	private SocketAddress socketAddress;
 	private Socket socket;
 	private T commands;
 	private boolean connected;
@@ -16,15 +21,16 @@ public class BaseSocketServer<T extends BaseSocketCommands<S>, S> implements Run
 		this.ip = ip;
 		this.port = port;
 		this.log_tag = log_tag;
-		socket = null;
+		this.socket = null;
 		try {
-			commands = typeArgumentClass.newInstance();
-		} catch (InstantiationException | IllegalAccessException e) {
+			this.socketAddress = new InetSocketAddress(InetAddress.getByName(ip), port);
+			this.commands = typeArgumentClass.newInstance();
+		} catch (InstantiationException | IllegalAccessException | UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		connected = false;
-		stop = false;
+		this.connected = false;
+		this.stop = false;
 	}
 
 	@Override
@@ -33,7 +39,8 @@ public class BaseSocketServer<T extends BaseSocketCommands<S>, S> implements Run
 		while (!stop) {
 			try {
 				try {
-					socket = new Socket(ip, port);
+					socket = new Socket();
+					socket.connect(socketAddress, 5000);
 					socket.setSoTimeout(5000);
 					connected = true;
 
@@ -103,7 +110,5 @@ public class BaseSocketServer<T extends BaseSocketCommands<S>, S> implements Run
 		} catch (IOException e) {
 			// Who cares.
 		}
-		if (!connected)
-			Thread.currentThread().interrupt();
 	}
 }

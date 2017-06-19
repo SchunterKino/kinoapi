@@ -55,6 +55,7 @@ public class App {
 
 			// Cleanup!
 			dolbyConnection.stopServer();
+			jniorConnection.stopServer();
 
 			// Shutdown the servers.
 			try {
@@ -66,6 +67,8 @@ public class App {
 
 			// Wait for the hardware connections to terminate.
 			try {
+				if (!dolbyConnection.isConnected())
+					dolbyThread.interrupt();
 				dolbyThread.join();
 			} catch (InterruptedException e) {
 				// We want to stop anyways. Errors are ok.
@@ -73,6 +76,8 @@ public class App {
 			System.out.println("Dolby: Server stopped.");
 			
 			try {
+				if (!jniorConnection.isConnected())
+					jniorThread.interrupt();
 				jniorThread.join();
 			} catch (InterruptedException e) {
 				// We want to stop anyways. Errors are ok.
