@@ -6,4 +6,6 @@ public interface IDolbyStatusUpdateReceiver {
 	void onDolbyDisconnected();
 
 	void onVolumeChanged(int volume);
+
+	void onMuteStatusChanged(boolean muted);
 }

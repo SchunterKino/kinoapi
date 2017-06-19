@@ -33,9 +33,16 @@ public class DolbySocketCommands implements Runnable {
 	private boolean stop;
 	private LinkedList<CommandContainer> commandQueue;
 	private CommandContainer currentCommand;
+
+	// Volume control
 	private Pattern faderPattern;
 	private int volume;
 	private Instant lastGetVolume;
+
+	// Mute button
+	private Pattern mutePattern;
+	private boolean muted;
+	private Instant lastGetMuteStatus;
 
 	private LinkedList<IDolbyStatusUpdateReceiver> listeners;
 
@@ -44,9 +51,15 @@ public class DolbySocketCommands implements Runnable {
 		this.stop = false;
 		this.commandQueue = new LinkedList<>();
 		this.currentCommand = noneCommand;
+
 		this.faderPattern = Pattern.compile("cp750\\.sys\\.fader (\\d+)");
 		this.volume = -1;
 		this.lastGetVolume = null;
+
+		this.mutePattern = Pattern.compile("cp750\\.sys\\.mute (\\d+)");
+		this.muted = false;
+		this.lastGetMuteStatus = null;
+
 		this.listeners = new LinkedList<>();
 	}
 
@@ -77,15 +90,28 @@ public class DolbySocketCommands implements Runnable {
 
 					System.out.println("Dolby: Current command: " + currentCommand.cmd + ". Received: " + ret.trim());
 
+					Matcher matcher;
 					switch (currentCommand.cmd) {
 					case GetVolume:
 						// Parse the response
-						Matcher matcher = faderPattern.matcher(ret);
+						matcher = faderPattern.matcher(ret);
 						// Wait until we get the desired response.
 						while (matcher.find()) {
 							String volume = matcher.group(1);
 							if (volume != null) {
 								updateVolumeValue(Integer.parseInt(volume));
+								currentCommand = noneCommand;
+							}
+						}
+						break;
+					case GetMuteStatus:
+						// Parse the response
+						matcher = mutePattern.matcher(ret);
+						// Wait until we get the desired response.
+						while (matcher.find()) {
+							String muted = matcher.group(1);
+							if (muted != null) {
+								updateMuteStatus(Integer.parseInt(muted) != 0);
 								currentCommand = noneCommand;
 							}
 						}
@@ -111,6 +137,9 @@ public class DolbySocketCommands implements Runnable {
 					// connected.
 					if (lastGetVolume == null || Duration.between(lastGetVolume, Instant.now()).toMillis() > 5000)
 						currentCommand = new CommandContainer(Commands.GetVolume);
+					else if (lastGetMuteStatus == null
+							|| Duration.between(lastGetVolume, Instant.now()).toMillis() > 5000)
+						currentCommand = new CommandContainer(Commands.GetMuteStatus);
 				}
 
 				// Send the right command now.
@@ -130,6 +159,13 @@ public class DolbySocketCommands implements Runnable {
 					break;
 				case DecreaseVolume:
 					command = "cp750.ctrl.fader_delta -1";
+					break;
+				case GetMuteStatus:
+					command = "cp750.sys.mute ?";
+					lastGetMuteStatus = Instant.now();
+					break;
+				case SetMuteStatus:
+					command = "cp750.sys.mute " + currentCommand.value;
 					break;
 				}
 
@@ -184,6 +220,18 @@ public class DolbySocketCommands implements Runnable {
 		}
 	}
 
+	public boolean isMuted() {
+		return muted;
+	}
+
+	public void setMuted(boolean muted) {
+		synchronized (commandQueue) {
+			commandQueue.add(new CommandContainer(Commands.SetMuteStatus, muted ? 1 : 0));
+			// Get the new status right away afterwards.
+			commandQueue.add(new CommandContainer(Commands.GetMuteStatus));
+		}
+	}
+
 	private String read() throws IOException {
 		InputStream in = socket.getInputStream();
 		byte[] buffer = new byte[1024];
@@ -215,6 +263,17 @@ public class DolbySocketCommands implements Runnable {
 		synchronized (listeners) {
 			for (IDolbyStatusUpdateReceiver listener : listeners) {
 				listener.onVolumeChanged(volume);
+			}
+		}
+	}
+
+	private void updateMuteStatus(boolean muted) {
+		this.muted = muted;
+
+		// Notify listeners.
+		synchronized (listeners) {
+			for (IDolbyStatusUpdateReceiver listener : listeners) {
+				listener.onMuteStatusChanged(muted);
 			}
 		}
 	}

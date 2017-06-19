@@ -4,6 +4,7 @@ When a websocket connection to the server on port 8641 is opened the server send
 
  * `dolby_connection` - If the audio processor is available.
    * `volume_changed` - Current volume level. *Only sent if the Dolby connection is available.*
+   * `mute_status_changed` - Current mute status. *Only sent if the Dolby connection is available.*
 
 ## Message format
 Every message is encoded as a JSON object containing at least a `msg_type` and an `action` string attribute.
@@ -34,6 +35,12 @@ Sent when the volume was changed (through any means).
  * `action` - string: `volume_changed`
  * `volume` - int: The new volume the audio processor was set to. Number in the range of `0` to `70`. `40` is equivalent to `4.0` on the Dolby display.
 
+#### Mute status changed notification
+Sent when the sound was muted or unmuted.
+ * `msg_type` - string: `volume`
+ * `action` - string: `mute_status_changed`
+ * `muted` - boolean: `true` if sound is muted, `false` otherwise.
+
 ## Client -> Server
 ### Dolby CP750 Audio
 #### Set volume to value
@@ -52,3 +59,10 @@ Increase the volume by 0.1.
 Decrease the volume by 0.1.
  * `msg_type` - string: `volume`
  * `action` - string: `decrease_volume`
+
+#### Mute or unmute the sound
+Set the mute status to the specified value.
+This triggers a `mute_status_changed` notification on all connected clients when the mute status got applied.
+ * `msg_type` - string: `volume`
+ * `action` - string: `set_mute_status`
+ * `muted` - boolean: `true` to mute the sound, `false` to unmute.

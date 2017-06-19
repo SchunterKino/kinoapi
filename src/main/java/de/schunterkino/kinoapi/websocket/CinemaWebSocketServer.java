@@ -15,6 +15,8 @@ import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.DolbyConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
+import de.schunterkino.kinoapi.websocket.messages.MuteStatusChangedMessage;
+import de.schunterkino.kinoapi.websocket.messages.SetMuteStatusMessage;
 import de.schunterkino.kinoapi.websocket.messages.SetVolumeMessage;
 import de.schunterkino.kinoapi.websocket.messages.VolumeChangedMessage;
 
@@ -39,8 +41,10 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 
 		// Inform the new client of the current status.
 		conn.send(gson.toJson(new DolbyConnectionMessage(dolby.isConnected())));
-		if (dolby.isConnected())
+		if (dolby.isConnected()) {
 			conn.send(gson.toJson(new VolumeChangedMessage(dolby.getTelnetCommands().getVolume())));
+			conn.send(gson.toJson(new MuteStatusChangedMessage(dolby.getTelnetCommands().isMuted())));
+		}
 	}
 
 	@Override
@@ -98,6 +102,15 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 								"Failed to decrease volume. No connection to Dolby audio processor.")));
 
 					break;
+				case "set_mute_status":
+					SetMuteStatusMessage setMuteStatusMsg = gson.fromJson(message, SetMuteStatusMessage.class);
+					if (dolby.isConnected())
+						dolby.getTelnetCommands().setMuted(setMuteStatusMsg.isMuted());
+					else
+						conn.send(gson.toJson(new ErrorMessage(
+								"Failed to change mute state. No connection to Dolby audio processor.")));
+
+					break;
 
 				default:
 					System.err.println("Websocket: Invalid command from " + conn + ": " + message);
@@ -152,6 +165,12 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 	@Override
 	public void onVolumeChanged(int volume) {
 		VolumeChangedMessage msg = new VolumeChangedMessage(volume);
+		sendToAll(gson.toJson(msg));
+	}
+
+	@Override
+	public void onMuteStatusChanged(boolean muted) {
+		MuteStatusChangedMessage msg = new MuteStatusChangedMessage(muted);
 		sendToAll(gson.toJson(msg));
 	}
 }
