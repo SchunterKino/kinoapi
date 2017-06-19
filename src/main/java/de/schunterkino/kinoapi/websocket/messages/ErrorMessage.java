@@ -5,7 +5,7 @@ public class ErrorMessage extends BaseMessage {
 	private String error;
 
 	public ErrorMessage(String error) {
-		super("error");
+		super("error", "error");
 		this.error = error;
 	}
 

@@ -69,30 +69,42 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 			BaseMessage msg_type = gson.fromJson(message, BaseMessage.class);
 
 			switch (msg_type.getMessageType()) {
-			case "set_volume":
-				SetVolumeMessage setVolumeMsg = gson.fromJson(message, SetVolumeMessage.class);
-				if (dolby.isConnected())
-					dolby.getTelnetCommands().setVolume(setVolumeMsg.getVolume());
-				else
-					conn.send(gson.toJson(
-							new ErrorMessage("Failed to change volume. No connection to Dolby audio processor.")));
-				break;
-			case "increase_volume":
-				if (dolby.isConnected())
-					dolby.getTelnetCommands().increaseVolume();
-				else
-					conn.send(gson.toJson(
-							new ErrorMessage("Failed to increase volume. No connection to Dolby audio processor.")));
+			// Handle all Dolby Volume related commands.
+			case "volume":
+				switch (msg_type.getAction()) {
+				case "set_volume":
+					SetVolumeMessage setVolumeMsg = gson.fromJson(message, SetVolumeMessage.class);
+					if (dolby.isConnected())
+						dolby.getTelnetCommands().setVolume(setVolumeMsg.getVolume());
+					else
+						conn.send(gson.toJson(
+								new ErrorMessage("Failed to change volume. No connection to Dolby audio processor.")));
+					break;
 
-				break;
-			case "decrease_volume":
-				if (dolby.isConnected())
-					dolby.getTelnetCommands().decreaseVolume();
-				else
-					conn.send(gson.toJson(
-							new ErrorMessage("Failed to decrease volume. No connection to Dolby audio processor.")));
+				case "increase_volume":
+					if (dolby.isConnected())
+						dolby.getTelnetCommands().increaseVolume();
+					else
+						conn.send(gson.toJson(new ErrorMessage(
+								"Failed to increase volume. No connection to Dolby audio processor.")));
 
+					break;
+
+				case "decrease_volume":
+					if (dolby.isConnected())
+						dolby.getTelnetCommands().decreaseVolume();
+					else
+						conn.send(gson.toJson(new ErrorMessage(
+								"Failed to decrease volume. No connection to Dolby audio processor.")));
+
+					break;
+
+				default:
+					System.err.println("Websocket: Invalid command from " + conn + ": " + message);
+					conn.send(gson.toJson(new ErrorMessage("Invalid command: " + msg_type.getMessageType())));
+				}
 				break;
+
 			default:
 				System.err.println("Websocket: Invalid command from " + conn + ": " + message);
 				conn.send(gson.toJson(new ErrorMessage("Invalid command: " + msg_type.getMessageType())));

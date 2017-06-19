@@ -4,7 +4,7 @@ public class VolumeChangedMessage extends BaseMessage {
 	public int volume;
 
 	public VolumeChangedMessage(int volume) {
-		super("volume_changed");
+		super("volume", "volume_changed");
 		this.volume = volume;
 	}
 }

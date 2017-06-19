@@ -5,7 +5,7 @@ public class SetVolumeMessage extends BaseMessage {
 	private int volume;
 
 	public SetVolumeMessage() {
-		super("set_volume");
+		super("volume", "set_volume");
 	}
 
 	public int getVolume() {
