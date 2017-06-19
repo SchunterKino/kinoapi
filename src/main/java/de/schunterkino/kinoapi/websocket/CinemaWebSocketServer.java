@@ -127,7 +127,8 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 				default:
 					System.err.println("Websocket: Invalid command from " + conn + ": " + message);
-					conn.send(gson.toJson(new ErrorMessage("Invalid command: " + msg_type.getMessageType())));
+					conn.send(gson.toJson(new ErrorMessage(
+							"Invalid command: " + msg_type.getMessageType() + " -> " + msg_type.getAction())));
 				}
 				break;
 
@@ -141,12 +142,17 @@ public class CinemaWebSocketServer extends WebSocketServer
 						conn.send(gson.toJson(new ErrorMessage(
 								"Failed to change light level. No connection to Jnior automation box.")));
 					break;
+				default:
+					System.err.println("Websocket: Invalid command from " + conn + ": " + message);
+					conn.send(gson.toJson(new ErrorMessage(
+							"Invalid command: " + msg_type.getMessageType() + " -> " + msg_type.getAction())));
 				}
 				break;
 
 			default:
 				System.err.println("Websocket: Invalid command from " + conn + ": " + message);
-				conn.send(gson.toJson(new ErrorMessage("Invalid command: " + msg_type.getMessageType())));
+				conn.send(gson.toJson(new ErrorMessage(
+						"Invalid command: " + msg_type.getMessageType() + " -> " + msg_type.getAction())));
 			}
 		} catch (JsonSyntaxException e) {
 			System.err.println("Websocket: Error parsing message from " + conn + ": " + e.getMessage());
