@@ -56,8 +56,10 @@ public class DolbyWrapper implements Runnable {
 
 			// Properly shutdown the client connection.
 			try {
-				socket.close();
-				System.out.println("Dolby: Connection closed.");
+				if (socket != null) {
+					socket.close();
+					System.out.println("Dolby: Connection closed.");
+				}
 			} catch (IOException e) {
 				System.err.println("Error while closing dolby connection: " + e.getMessage());
 			}

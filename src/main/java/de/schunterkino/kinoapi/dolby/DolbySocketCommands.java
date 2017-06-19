@@ -138,7 +138,7 @@ public class DolbySocketCommands implements Runnable {
 					if (lastGetVolume == null || Duration.between(lastGetVolume, Instant.now()).toMillis() > 5000)
 						currentCommand = new CommandContainer(Commands.GetVolume);
 					else if (lastGetMuteStatus == null
-							|| Duration.between(lastGetVolume, Instant.now()).toMillis() > 5000)
+							|| Duration.between(lastGetMuteStatus, Instant.now()).toMillis() > 5000)
 						currentCommand = new CommandContainer(Commands.GetMuteStatus);
 				}
 
