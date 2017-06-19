@@ -41,12 +41,16 @@ public class DolbySocketCommands implements Runnable {
 
 	public DolbySocketCommands(Socket socket) {
 		this.socket = socket;
-		this.faderPattern = Pattern.compile("cp750\\.sys\\.fader (\\d+)");
+		this.stop = false;
 		this.commandQueue = new LinkedList<>();
-		this.listeners = new LinkedList<>();
+		this.currentCommand = noneCommand;
+		this.faderPattern = Pattern.compile("cp750\\.sys\\.fader (\\d+)");
+		this.volume = -1;
 		this.lastGetVolume = null;
+		this.listeners = new LinkedList<>();
 	}
 
+	@Override
 	public void run() {
 
 		// Notify listeners.
@@ -59,7 +63,6 @@ public class DolbySocketCommands implements Runnable {
 		// Go in a loop to
 		try {
 			do {
-
 				// We're waiting on a response for that command. See if there's
 				// something here.
 				if (currentCommand.cmd != Commands.None) {
