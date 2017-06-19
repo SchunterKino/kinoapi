@@ -14,3 +14,6 @@ To compile the tool run:
 
 To run the server:
 `mvn exec:java`
+
+## Websocket JSON interface
+The message format and available commands are documented [here](API.md).
