@@ -1,45 +1,23 @@
 package de.schunterkino.kinoapi.dolby;
 
 import java.io.IOException;
+import java.net.Socket;
 
-import org.apache.commons.net.telnet.EchoOptionHandler;
-import org.apache.commons.net.telnet.InvalidTelnetOptionException;
-import org.apache.commons.net.telnet.SuppressGAOptionHandler;
-import org.apache.commons.net.telnet.TelnetClient;
-import org.apache.commons.net.telnet.TelnetNotificationHandler;
-import org.apache.commons.net.telnet.TerminalTypeOptionHandler;
-
-public class DolbyWrapper implements Runnable, TelnetNotificationHandler {
+public class DolbyWrapper implements Runnable {
 
 	private String dolbyip;
 	private int dolbyport;
-	private TelnetClient telnetClient;
-	private DolbyTelnetCommands telnetCommands;
+	private Socket socket;
+	private DolbySocketCommands dolbyCommands;
 	private boolean connected;
 	private boolean stop;
 
 	public DolbyWrapper(String ip, int port) {
+		socket = null;
 		dolbyip = ip;
 		dolbyport = port;
 		connected = false;
 		stop = false;
-
-		// Setup the telnet connection.
-		telnetClient = new TelnetClient();
-		telnetClient.setDefaultTimeout(5000);
-		telnetCommands = new DolbyTelnetCommands(telnetClient);
-
-		TerminalTypeOptionHandler ttopt = new TerminalTypeOptionHandler("VT100", false, false, true, false);
-		EchoOptionHandler echoopt = new EchoOptionHandler(true, false, true, false);
-		SuppressGAOptionHandler gaopt = new SuppressGAOptionHandler(true, true, true, true);
-
-		try {
-			telnetClient.addOptionHandler(ttopt);
-			telnetClient.addOptionHandler(echoopt);
-			telnetClient.addOptionHandler(gaopt);
-		} catch (InvalidTelnetOptionException | IOException e) {
-			System.err.println("Error registering option handlers: " + e.getMessage());
-		}
 	}
 
 	@Override
@@ -48,16 +26,16 @@ public class DolbyWrapper implements Runnable, TelnetNotificationHandler {
 		while (!stop) {
 			try {
 				try {
-					telnetClient.connect(dolbyip, dolbyport);
-					telnetClient.registerNotifHandler(this);
+					socket = new Socket(dolbyip, dolbyport);
+					socket.setSoTimeout(5000);
+					connected = true;
 
 					// Start a thread to handle telnet messages.
-					telnetCommands.reset();
-					Thread readerThread = new Thread(telnetCommands);
+					dolbyCommands = new DolbySocketCommands(socket);
+					Thread readerThread = new Thread(dolbyCommands);
 					readerThread.start();
 
 					System.out.printf("Dolby: Connected to %s:%d.%n", dolbyip, dolbyport);
-					connected = true;
 
 					// Wait for the thread to be done.
 					// The thread only terminates, if there is an issue with the
@@ -68,21 +46,19 @@ public class DolbyWrapper implements Runnable, TelnetNotificationHandler {
 					// The readerThread will die on its own if it already
 					// started.
 					if (!stop)
-						System.err.println("Error in dolby telnet connection. Reconnecting in 30 seconds. Exception: "
-								+ e.getMessage());
+						System.err.println(
+								"Error in dolby connection. Reconnecting in 30 seconds. Exception: " + e.getMessage());
 				}
 			} catch (InterruptedException e) {
 				System.err.println("Error while waiting for dolby reader thread: " + e.getMessage());
 			}
 
-			// Properly shutdown the telnet client connection.
-			if (telnetClient.isConnected()) {
-				try {
-					telnetClient.disconnect();
-					System.out.println("Dolby: Connection closed.");
-				} catch (IOException e) {
-					System.err.println("Error while closing dolby telnet connection: " + e.getMessage());
-				}
+			// Properly shutdown the client connection.
+			try {
+				socket.close();
+				System.out.println("Dolby: Connection closed.");
+			} catch (IOException e) {
+				System.err.println("Error while closing dolby connection: " + e.getMessage());
 			}
 
 			connected = false;
@@ -100,57 +76,21 @@ public class DolbyWrapper implements Runnable, TelnetNotificationHandler {
 		}
 	}
 
-	/***
-	 * Callback method called when TelnetClient receives an option negotiation
-	 * command.
-	 *
-	 * @param negotiation_code
-	 *            - type of negotiation command received (RECEIVED_DO,
-	 *            RECEIVED_DONT, RECEIVED_WILL, RECEIVED_WONT, RECEIVED_COMMAND)
-	 * @param option_code
-	 *            - code of the option negotiated
-	 ***/
-	@Override
-	public void receivedNegotiation(int negotiation_code, int option_code) {
-		String command = null;
-		switch (negotiation_code) {
-		case TelnetNotificationHandler.RECEIVED_DO:
-			command = "DO";
-			break;
-		case TelnetNotificationHandler.RECEIVED_DONT:
-			command = "DONT";
-			break;
-		case TelnetNotificationHandler.RECEIVED_WILL:
-			command = "WILL";
-			break;
-		case TelnetNotificationHandler.RECEIVED_WONT:
-			command = "WONT";
-			break;
-		case TelnetNotificationHandler.RECEIVED_COMMAND:
-			command = "COMMAND";
-			break;
-		default:
-			command = Integer.toString(negotiation_code); // Should not happen
-			break;
-		}
-		System.out.println("Dolby: Received " + command + " for option code " + option_code);
-	}
-
 	public boolean isConnected() {
 		return connected;
 	}
 
-	public DolbyTelnetCommands getTelnetCommands() {
-		return telnetCommands;
+	public DolbySocketCommands getTelnetCommands() {
+		return dolbyCommands;
 	}
 
 	public void stopServer() {
 		stop = true;
-		if (telnetCommands != null)
-			telnetCommands.stop();
+		if (dolbyCommands != null)
+			dolbyCommands.stop();
 		try {
-			if (telnetClient != null)
-				telnetClient.disconnect();
+			if (socket != null)
+				socket.close();
 		} catch (IOException e) {
 			// Who cares.
 		}

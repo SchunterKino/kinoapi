@@ -1,17 +1,16 @@
 package de.schunterkino.kinoapi.dolby;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.Socket;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.net.telnet.TelnetClient;
-
-public class DolbyTelnetCommands implements Runnable {
+public class DolbySocketCommands implements Runnable {
 
 	private class CommandContainer {
 		public Commands cmd;
@@ -30,7 +29,7 @@ public class DolbyTelnetCommands implements Runnable {
 
 	private final CommandContainer noneCommand = new CommandContainer(Commands.None);
 
-	private TelnetClient telnetClient;
+	private Socket socket;
 	private boolean stop;
 	private LinkedList<CommandContainer> commandQueue;
 	private CommandContainer currentCommand;
@@ -40,22 +39,14 @@ public class DolbyTelnetCommands implements Runnable {
 
 	private LinkedList<IDolbyStatusUpdateReceiver> listeners;
 
-	public DolbyTelnetCommands(TelnetClient telnetClient) {
-		this.telnetClient = telnetClient;
+	public DolbySocketCommands(Socket socket) {
+		this.socket = socket;
 		this.faderPattern = Pattern.compile("cp750\\.sys\\.fader (\\d+)");
 		this.commandQueue = new LinkedList<>();
 		this.listeners = new LinkedList<>();
 		this.lastGetVolume = null;
 	}
 
-	public void reset() {
-		stop = false;
-		commandQueue.clear();
-		currentCommand = noneCommand;
-		volume = -1;
-	}
-
-	@Override
 	public void run() {
 
 		// Notify listeners.
@@ -67,7 +58,6 @@ public class DolbyTelnetCommands implements Runnable {
 
 		// Go in a loop to
 		try {
-			DataOutputStream out = new DataOutputStream(telnetClient.getOutputStream());
 			do {
 
 				// We're waiting on a response for that command. See if there's
@@ -77,6 +67,8 @@ public class DolbyTelnetCommands implements Runnable {
 					// Nothing yet. Keep waiting.
 					if (ret == null)
 						continue;
+
+					System.out.println("Dolby: Current command: " + currentCommand.cmd + ". Received: " + ret);
 
 					switch (currentCommand.cmd) {
 					case GetVolume:
@@ -115,30 +107,38 @@ public class DolbyTelnetCommands implements Runnable {
 				}
 
 				// Send the right command now.
+				String command = null;
 				switch (currentCommand.cmd) {
 				case None:
 					break;
 				case GetVolume:
-					out.writeUTF("cp750.sys.fader ?");
+					command = "cp750.sys.fader ?";
 					lastGetVolume = Instant.now();
 					break;
 				case SetVolume:
-					out.writeUTF("cp750.sys.fader " + currentCommand.value);
+					command = "cp750.sys.fader " + currentCommand.value;
 					break;
 				case IncreaseVolume:
-					out.writeUTF("cp750.ctrl.fader_delta 1");
+					command = "cp750.ctrl.fader_delta 1";
 					break;
 				case DecreaseVolume:
-					out.writeUTF("cp750.ctrl.fader_delta -1");
+					command = "cp750.ctrl.fader_delta -1";
 					break;
+				}
+
+				if (command != null) {
+					socket.getOutputStream().write((command + "\r\n").getBytes(Charset.forName("ascii")));
+					System.out.println("Dolby: Sent: " + command);
 				}
 
 				// Wait a bit until processing the next command.
 				Thread.sleep(500);
 			} while (!stop);
 		} catch (IOException | InterruptedException e) {
-			if (!stop)
+			if (!stop) {
+				System.err.println("Dolby: Error in reader thread: " + e.getMessage());
 				e.printStackTrace();
+			}
 		}
 
 		// Notify listeners.
@@ -178,8 +178,9 @@ public class DolbyTelnetCommands implements Runnable {
 	}
 
 	private String read() throws IOException {
-		InputStream in = telnetClient.getInputStream();
+		InputStream in = socket.getInputStream();
 		byte[] buffer = new byte[1024];
+
 		int ret_read = in.read(buffer);
 		if (ret_read == -1)
 			throw new IOException("EOF");
