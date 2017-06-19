@@ -41,6 +41,13 @@ Sent when the sound was muted or unmuted.
  * `action` - string: `mute_status_changed`
  * `muted` - boolean: `true` if sound is muted, `false` otherwise.
 
+### Integ Jnior 310
+#### Connection availability
+Sent when the jnior box for lights gets connected or disconnected.
+ * `msg_type` - string: `lights`
+ * `action` - string: `lights_connection`
+ * `connected` - boolean: `true` if connection to Jnior 310 is available, `false` otherwise.
+
 ## Client -> Server
 ### Dolby CP750 Audio
 #### Set volume to value

@@ -4,7 +4,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
-import de.schunterkino.kinoapi.dolby.DolbyWrapper;
+import de.schunterkino.kinoapi.dolby.DolbySocketCommands;
+import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
+import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
+import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
+import de.schunterkino.kinoapi.sockets.BaseSocketServer;
 import de.schunterkino.kinoapi.websocket.CinemaWebSocketServer;
 
 public class App {
@@ -19,12 +23,17 @@ public class App {
 	public static void main(String[] args) {
 
 		// Setup the Dolby CP750 connection.
-		DolbyWrapper dolbyConnection = new DolbyWrapper(DOLBY_IP, DOLBY_PORT);
+		BaseSocketServer<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolbyConnection = new BaseSocketServer<>(DOLBY_IP, DOLBY_PORT, "Dolby", DolbySocketCommands.class);
 		Thread dolbyThread = new Thread(dolbyConnection);
 		dolbyThread.start();
+		
+		// Setup the Integ Jnior 310 connection.
+		BaseSocketServer<JniorSocketCommands, IJniorStatusUpdateReceiver> jniorConnection = new BaseSocketServer<>(JNIOR_IP, JNIOR_PORT, "Jnior", JniorSocketCommands.class);
+		Thread jniorThread = new Thread(jniorConnection);
+		jniorThread.start();
 
 		// Start the websocket server now.
-		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer(WEBSOCKET_PORT, dolbyConnection);
+		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer(WEBSOCKET_PORT, dolbyConnection, jniorConnection);
 		websocketServer.start();
 		System.out.println("WebSocket: Server created on port: " + websocketServer.getPort());
 
@@ -62,6 +71,13 @@ public class App {
 				// We want to stop anyways. Errors are ok.
 			}
 			System.out.println("Dolby: Server stopped.");
+			
+			try {
+				jniorThread.join();
+			} catch (InterruptedException e) {
+				// We want to stop anyways. Errors are ok.
+			}
+			System.out.println("Jnior: Server stopped.");
 		}
 	}
 }

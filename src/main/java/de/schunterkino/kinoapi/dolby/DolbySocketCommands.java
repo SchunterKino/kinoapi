@@ -1,8 +1,6 @@
 package de.schunterkino.kinoapi.dolby;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.Socket;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.time.Instant;
@@ -10,29 +8,15 @@ import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class DolbySocketCommands implements Runnable {
+import de.schunterkino.kinoapi.sockets.BaseSocketCommands;
+import de.schunterkino.kinoapi.sockets.CommandContainer;
 
-	private class CommandContainer {
-		public Commands cmd;
-		public int value;
+public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateReceiver> {
 
-		public CommandContainer(Commands cmd) {
-			this.cmd = cmd;
-			this.value = 0;
-		}
+	private CommandContainer<Commands> noneCommand = new CommandContainer<>(Commands.None);
 
-		public CommandContainer(Commands cmd, int value) {
-			this.cmd = cmd;
-			this.value = value;
-		}
-	}
-
-	private final CommandContainer noneCommand = new CommandContainer(Commands.None);
-
-	private Socket socket;
-	private boolean stop;
-	private LinkedList<CommandContainer> commandQueue;
-	private CommandContainer currentCommand;
+	private LinkedList<CommandContainer<Commands>> commandQueue;
+	private CommandContainer<Commands> currentCommand;
 
 	// Volume control
 	private Pattern faderPattern;
@@ -44,11 +28,8 @@ public class DolbySocketCommands implements Runnable {
 	private boolean muted;
 	private Instant lastGetMuteStatus;
 
-	private LinkedList<IDolbyStatusUpdateReceiver> listeners;
-
 	public DolbySocketCommands() {
-		this.socket = null;
-		this.stop = false;
+		super();
 		this.commandQueue = new LinkedList<>();
 		this.currentCommand = noneCommand;
 
@@ -59,12 +40,6 @@ public class DolbySocketCommands implements Runnable {
 		this.mutePattern = Pattern.compile("cp750\\.sys\\.mute (\\d+)");
 		this.muted = false;
 		this.lastGetMuteStatus = null;
-
-		this.listeners = new LinkedList<>();
-	}
-
-	public void setSocket(Socket socket) {
-		this.socket = socket;
 	}
 
 	@Override
@@ -77,7 +52,7 @@ public class DolbySocketCommands implements Runnable {
 			}
 		}
 
-		// Go in a loop to
+		// Go in a loop to process the data on the socket.
 		try {
 			do {
 				// We're waiting on a response for that command. See if there's
@@ -136,10 +111,10 @@ public class DolbySocketCommands implements Runnable {
 					// TODO: Increase the interval if no websocket clients are
 					// connected.
 					if (lastGetVolume == null || Duration.between(lastGetVolume, Instant.now()).toMillis() > 5000)
-						currentCommand = new CommandContainer(Commands.GetVolume);
+						currentCommand = new CommandContainer<>(Commands.GetVolume);
 					else if (lastGetMuteStatus == null
 							|| Duration.between(lastGetMuteStatus, Instant.now()).toMillis() > 5000)
-						currentCommand = new CommandContainer(Commands.GetMuteStatus);
+						currentCommand = new CommandContainer<>(Commands.GetMuteStatus);
 				}
 
 				// Send the right command now.
@@ -194,17 +169,17 @@ public class DolbySocketCommands implements Runnable {
 
 	public void increaseVolume() {
 		synchronized (commandQueue) {
-			commandQueue.add(new CommandContainer(Commands.IncreaseVolume));
+			commandQueue.add(new CommandContainer<>(Commands.IncreaseVolume));
 			// Get the new volume right away afterwards.
-			commandQueue.add(new CommandContainer(Commands.GetVolume));
+			commandQueue.add(new CommandContainer<>(Commands.GetVolume));
 		}
 	}
 
 	public void decreaseVolume() {
 		synchronized (commandQueue) {
-			commandQueue.add(new CommandContainer(Commands.DecreaseVolume));
+			commandQueue.add(new CommandContainer<>(Commands.DecreaseVolume));
 			// Get the new volume right away afterwards.
-			commandQueue.add(new CommandContainer(Commands.GetVolume));
+			commandQueue.add(new CommandContainer<>(Commands.GetVolume));
 		}
 	}
 
@@ -214,9 +189,9 @@ public class DolbySocketCommands implements Runnable {
 
 	public void setVolume(int volume) {
 		synchronized (commandQueue) {
-			commandQueue.add(new CommandContainer(Commands.SetVolume, volume));
+			commandQueue.add(new CommandContainer<>(Commands.SetVolume, volume));
 			// Get the new volume right away afterwards.
-			commandQueue.add(new CommandContainer(Commands.GetVolume));
+			commandQueue.add(new CommandContainer<>(Commands.GetVolume));
 		}
 	}
 
@@ -226,33 +201,9 @@ public class DolbySocketCommands implements Runnable {
 
 	public void setMuted(boolean muted) {
 		synchronized (commandQueue) {
-			commandQueue.add(new CommandContainer(Commands.SetMuteStatus, muted ? 1 : 0));
+			commandQueue.add(new CommandContainer<>(Commands.SetMuteStatus, muted ? 1 : 0));
 			// Get the new status right away afterwards.
-			commandQueue.add(new CommandContainer(Commands.GetMuteStatus));
-		}
-	}
-
-	private String read() throws IOException {
-		InputStream in = socket.getInputStream();
-		byte[] buffer = new byte[1024];
-
-		int ret_read = in.read(buffer);
-		if (ret_read == -1)
-			throw new IOException("EOF");
-
-		if (ret_read == 0)
-			return null;
-
-		return new String(buffer, 0, ret_read);
-	}
-
-	public void stop() {
-		stop = true;
-	}
-
-	public void registerListener(IDolbyStatusUpdateReceiver listener) {
-		synchronized (listeners) {
-			listeners.add(listener);
+			commandQueue.add(new CommandContainer<>(Commands.GetMuteStatus));
 		}
 	}
 

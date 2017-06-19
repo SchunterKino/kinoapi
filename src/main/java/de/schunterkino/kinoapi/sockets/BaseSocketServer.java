@@ -1,22 +1,28 @@
-package de.schunterkino.kinoapi.dolby;
+package de.schunterkino.kinoapi.sockets;
 
 import java.io.IOException;
 import java.net.Socket;
 
-public class DolbyWrapper implements Runnable {
-
-	private String dolbyip;
-	private int dolbyport;
+public class BaseSocketServer<T extends BaseSocketCommands<S>, S> implements Runnable {
+	private String ip;
+	private int port;
+	private String log_tag;
 	private Socket socket;
-	private DolbySocketCommands dolbyCommands;
+	private T commands;
 	private boolean connected;
 	private boolean stop;
 
-	public DolbyWrapper(String ip, int port) {
-		dolbyip = ip;
-		dolbyport = port;
+	public BaseSocketServer(String ip, int port, String log_tag, Class<T> typeArgumentClass) {
+		this.ip = ip;
+		this.port = port;
+		this.log_tag = log_tag;
 		socket = null;
-		dolbyCommands = new DolbySocketCommands();
+		try {
+			commands = typeArgumentClass.newInstance();
+		} catch (InstantiationException | IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		connected = false;
 		stop = false;
 	}
@@ -27,16 +33,16 @@ public class DolbyWrapper implements Runnable {
 		while (!stop) {
 			try {
 				try {
-					socket = new Socket(dolbyip, dolbyport);
+					socket = new Socket(ip, port);
 					socket.setSoTimeout(5000);
 					connected = true;
 
 					// Start a thread to handle telnet messages.
-					dolbyCommands.setSocket(socket);
-					Thread readerThread = new Thread(dolbyCommands);
+					commands.setSocket(socket);
+					Thread readerThread = new Thread(commands);
 					readerThread.start();
 
-					System.out.printf("Dolby: Connected to %s:%d.%n", dolbyip, dolbyport);
+					System.out.printf("%s: Connected to %s:%d.%n", log_tag, ip, port);
 
 					// Wait for the thread to be done.
 					// The thread only terminates, if there is an issue with the
@@ -47,21 +53,21 @@ public class DolbyWrapper implements Runnable {
 					// The readerThread will die on its own if it already
 					// started.
 					if (!stop)
-						System.err.println(
-								"Error in dolby connection. Reconnecting in 30 seconds. Exception: " + e.getMessage());
+						System.err.printf(
+								"%s: Error in connection. Reconnecting in 30 seconds. Exception: %s%n", log_tag, e.getMessage());
 				}
 			} catch (InterruptedException e) {
-				System.err.println("Error while waiting for dolby reader thread: " + e.getMessage());
+				System.err.printf("%s: Error while waiting for reader thread: %s%n", log_tag, e.getMessage());
 			}
 
 			// Properly shutdown the client connection.
 			try {
 				if (socket != null) {
 					socket.close();
-					System.out.println("Dolby: Connection closed.");
+					System.out.printf("%s: Connection closed.%n", log_tag);
 				}
 			} catch (IOException e) {
-				System.err.println("Error while closing dolby connection: " + e.getMessage());
+				System.err.printf("%s: Error while closing connection: %s%n", log_tag, e.getMessage());
 			}
 
 			connected = false;
@@ -83,14 +89,14 @@ public class DolbyWrapper implements Runnable {
 		return connected;
 	}
 
-	public DolbySocketCommands getTelnetCommands() {
-		return dolbyCommands;
+	public T getCommands() {
+		return commands;
 	}
 
 	public void stopServer() {
 		stop = true;
-		if (dolbyCommands != null)
-			dolbyCommands.stop();
+		if (commands != null)
+			commands.stop();
 		try {
 			if (socket != null)
 				socket.close();

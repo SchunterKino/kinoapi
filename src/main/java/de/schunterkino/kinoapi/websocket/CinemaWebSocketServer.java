@@ -10,29 +10,40 @@ import org.java_websocket.server.WebSocketServer;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
-import de.schunterkino.kinoapi.dolby.DolbyWrapper;
+import de.schunterkino.kinoapi.dolby.DolbySocketCommands;
 import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
+import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
+import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
+import de.schunterkino.kinoapi.sockets.BaseSocketServer;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.DolbyConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
+import de.schunterkino.kinoapi.websocket.messages.LightsConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.MuteStatusChangedMessage;
+import de.schunterkino.kinoapi.websocket.messages.SetLightLevelMessage;
 import de.schunterkino.kinoapi.websocket.messages.SetMuteStatusMessage;
 import de.schunterkino.kinoapi.websocket.messages.SetVolumeMessage;
 import de.schunterkino.kinoapi.websocket.messages.VolumeChangedMessage;
 
-public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStatusUpdateReceiver {
+public class CinemaWebSocketServer extends WebSocketServer
+		implements IDolbyStatusUpdateReceiver, IJniorStatusUpdateReceiver {
 
 	private Gson gson;
-	private DolbyWrapper dolby;
+	private BaseSocketServer<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolby;
+	private BaseSocketServer<JniorSocketCommands, IJniorStatusUpdateReceiver> jnior;
 
-	public CinemaWebSocketServer(int port, DolbyWrapper dolby) {
+	public CinemaWebSocketServer(int port, BaseSocketServer<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolby,
+			BaseSocketServer<JniorSocketCommands, IJniorStatusUpdateReceiver> jnior) {
 		super(new InetSocketAddress(port));
 
 		this.gson = new Gson();
 
 		// Start listening for dolby events.
 		this.dolby = dolby;
-		dolby.getTelnetCommands().registerListener(this);
+		dolby.getCommands().registerListener(this);
+
+		this.jnior = jnior;
+		jnior.getCommands().registerListener(this);
 	}
 
 	@Override
@@ -42,8 +53,8 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 		// Inform the new client of the current status.
 		conn.send(gson.toJson(new DolbyConnectionMessage(dolby.isConnected())));
 		if (dolby.isConnected()) {
-			conn.send(gson.toJson(new VolumeChangedMessage(dolby.getTelnetCommands().getVolume())));
-			conn.send(gson.toJson(new MuteStatusChangedMessage(dolby.getTelnetCommands().isMuted())));
+			conn.send(gson.toJson(new VolumeChangedMessage(dolby.getCommands().getVolume())));
+			conn.send(gson.toJson(new MuteStatusChangedMessage(dolby.getCommands().isMuted())));
 		}
 	}
 
@@ -79,7 +90,7 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 				case "set_volume":
 					SetVolumeMessage setVolumeMsg = gson.fromJson(message, SetVolumeMessage.class);
 					if (dolby.isConnected())
-						dolby.getTelnetCommands().setVolume(setVolumeMsg.getVolume());
+						dolby.getCommands().setVolume(setVolumeMsg.getVolume());
 					else
 						conn.send(gson.toJson(
 								new ErrorMessage("Failed to change volume. No connection to Dolby audio processor.")));
@@ -87,7 +98,7 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 
 				case "increase_volume":
 					if (dolby.isConnected())
-						dolby.getTelnetCommands().increaseVolume();
+						dolby.getCommands().increaseVolume();
 					else
 						conn.send(gson.toJson(new ErrorMessage(
 								"Failed to increase volume. No connection to Dolby audio processor.")));
@@ -96,7 +107,7 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 
 				case "decrease_volume":
 					if (dolby.isConnected())
-						dolby.getTelnetCommands().decreaseVolume();
+						dolby.getCommands().decreaseVolume();
 					else
 						conn.send(gson.toJson(new ErrorMessage(
 								"Failed to decrease volume. No connection to Dolby audio processor.")));
@@ -105,7 +116,7 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 				case "set_mute_status":
 					SetMuteStatusMessage setMuteStatusMsg = gson.fromJson(message, SetMuteStatusMessage.class);
 					if (dolby.isConnected())
-						dolby.getTelnetCommands().setMuted(setMuteStatusMsg.isMuted());
+						dolby.getCommands().setMuted(setMuteStatusMsg.isMuted());
 					else
 						conn.send(gson.toJson(new ErrorMessage(
 								"Failed to change mute state. No connection to Dolby audio processor.")));
@@ -118,6 +129,19 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 				}
 				break;
 
+			case "lights":
+				switch (msg_type.getAction()) {
+				case "set_light_level":
+					SetLightLevelMessage setLightLevelMsg = gson.fromJson(message, SetLightLevelMessage.class);
+					if (jnior.isConnected())
+						jnior.getCommands().setLightLevel(setLightLevelMsg.getLightLevel());
+					else
+						conn.send(gson.toJson(new ErrorMessage(
+								"Failed to change light level. No connection to Jnior automation box.")));
+					break;
+				}
+				break;
+				
 			default:
 				System.err.println("Websocket: Invalid command from " + conn + ": " + message);
 				conn.send(gson.toJson(new ErrorMessage("Invalid command: " + msg_type.getMessageType())));
@@ -171,6 +195,18 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 	@Override
 	public void onMuteStatusChanged(boolean muted) {
 		MuteStatusChangedMessage msg = new MuteStatusChangedMessage(muted);
+		sendToAll(gson.toJson(msg));
+	}
+
+	@Override
+	public void onJniorConnected() {
+		LightsConnectionMessage msg = new LightsConnectionMessage(true);
+		sendToAll(gson.toJson(msg));
+	}
+
+	@Override
+	public void onJniorDisconnected() {
+		LightsConnectionMessage msg = new LightsConnectionMessage(false);
 		sendToAll(gson.toJson(msg));
 	}
 }
