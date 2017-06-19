@@ -13,9 +13,10 @@ public class DolbyWrapper implements Runnable {
 	private boolean stop;
 
 	public DolbyWrapper(String ip, int port) {
-		socket = null;
 		dolbyip = ip;
 		dolbyport = port;
+		socket = null;
+		dolbyCommands = new DolbySocketCommands();
 		connected = false;
 		stop = false;
 	}
@@ -31,7 +32,7 @@ public class DolbyWrapper implements Runnable {
 					connected = true;
 
 					// Start a thread to handle telnet messages.
-					dolbyCommands = new DolbySocketCommands(socket);
+					dolbyCommands.setSocket(socket);
 					Thread readerThread = new Thread(dolbyCommands);
 					readerThread.start();
 

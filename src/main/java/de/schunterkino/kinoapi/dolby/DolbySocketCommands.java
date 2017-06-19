@@ -39,8 +39,8 @@ public class DolbySocketCommands implements Runnable {
 
 	private LinkedList<IDolbyStatusUpdateReceiver> listeners;
 
-	public DolbySocketCommands(Socket socket) {
-		this.socket = socket;
+	public DolbySocketCommands() {
+		this.socket = null;
 		this.stop = false;
 		this.commandQueue = new LinkedList<>();
 		this.currentCommand = noneCommand;
@@ -48,6 +48,10 @@ public class DolbySocketCommands implements Runnable {
 		this.volume = -1;
 		this.lastGetVolume = null;
 		this.listeners = new LinkedList<>();
+	}
+
+	public void setSocket(Socket socket) {
+		this.socket = socket;
 	}
 
 	@Override
@@ -71,7 +75,7 @@ public class DolbySocketCommands implements Runnable {
 					if (ret == null)
 						continue;
 
-					System.out.println("Dolby: Current command: " + currentCommand.cmd + ". Received: " + ret);
+					System.out.println("Dolby: Current command: " + currentCommand.cmd + ". Received: " + ret.trim());
 
 					switch (currentCommand.cmd) {
 					case GetVolume:
