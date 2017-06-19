@@ -38,3 +38,11 @@ Change the volume to the specified level.
 This triggers a `volume_changed` notification on all connected clients when the volume actually got changed.
  * `msg_type` - string: `set_volume`
  * `volume` - int: The volume level to change to. Number in the range of `0` to `70`. `40` is equivalent to `4.0` on the Dolby display.
+
+#### Increase volume
+Increase the volume by 0.1.
+ * `msg_type` - string: `increase_volume`
+
+#### Decrease volume
+Decrease the volume by 0.1.
+ * `msg_type` - string: `decrease_volume`
