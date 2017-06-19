@@ -73,3 +73,11 @@ This triggers a `mute_status_changed` notification on all connected clients when
  * `msg_type` - string: `volume`
  * `action` - string: `set_mute_status`
  * `muted` - boolean: `true` to mute the sound, `false` to unmute.
+
+### Integ Jnior 310
+#### Change light intensity
+Change the volume to the specified level.
+This triggers a `volume_changed` notification on all connected clients when the volume actually got changed.
+ * `msg_type` - string: `lights`
+ * `action` - string: `set_light_level`
+ * `level` - int: The light intensity to choose as a value from 0-3. 0 = 0%, 1 = 33%, 2 = 66% and 3 = 100%.

@@ -56,6 +56,8 @@ public class CinemaWebSocketServer extends WebSocketServer
 			conn.send(gson.toJson(new VolumeChangedMessage(dolby.getCommands().getVolume())));
 			conn.send(gson.toJson(new MuteStatusChangedMessage(dolby.getCommands().isMuted())));
 		}
+
+		conn.send(gson.toJson(new LightsConnectionMessage(jnior.isConnected())));
 	}
 
 	@Override
@@ -141,7 +143,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 					break;
 				}
 				break;
-				
+
 			default:
 				System.err.println("Websocket: Invalid command from " + conn + ": " + message);
 				conn.send(gson.toJson(new ErrorMessage("Invalid command: " + msg_type.getMessageType())));
