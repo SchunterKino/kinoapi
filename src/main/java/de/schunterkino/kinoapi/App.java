@@ -8,10 +8,11 @@ import de.schunterkino.kinoapi.dolby.DolbySocketCommands;
 import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
-import de.schunterkino.kinoapi.sockets.BaseSocketServer;
+import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.CinemaWebSocketServer;
 
 public class App {
+	// TODO: Put in config file.
 	private final static int WEBSOCKET_PORT = 8641;
 	private final static String DOLBY_IP = "10.100.152.16";
 	private final static int DOLBY_PORT = 61408;
@@ -23,13 +24,13 @@ public class App {
 	public static void main(String[] args) {
 
 		// Setup the Dolby CP750 connection.
-		BaseSocketServer<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolbyConnection = new BaseSocketServer<>(
+		BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolbyConnection = new BaseSocketClient<>(
 				DOLBY_IP, DOLBY_PORT, "Dolby", DolbySocketCommands.class);
 		Thread dolbyThread = new Thread(dolbyConnection);
 		dolbyThread.start();
 
 		// Setup the Integ Jnior 310 connection.
-		BaseSocketServer<JniorSocketCommands, IJniorStatusUpdateReceiver> jniorConnection = new BaseSocketServer<>(
+		BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver> jniorConnection = new BaseSocketClient<>(
 				JNIOR_IP, JNIOR_PORT, "Jnior", JniorSocketCommands.class);
 		Thread jniorThread = new Thread(jniorConnection);
 		jniorThread.start();

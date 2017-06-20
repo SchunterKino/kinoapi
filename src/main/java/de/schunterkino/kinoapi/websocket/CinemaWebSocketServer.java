@@ -15,7 +15,7 @@ import de.schunterkino.kinoapi.dolby.DolbySocketCommands;
 import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
-import de.schunterkino.kinoapi.sockets.BaseSocketServer;
+import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.DolbyConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
@@ -23,17 +23,53 @@ import de.schunterkino.kinoapi.websocket.messages.LightsConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.MuteStatusChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.VolumeChangedMessage;
 
+/**
+ * WebSocket server class which serves the documented JSON API. This class acts
+ * as a proxy and forwards the events from the different hardware connections -
+ * like volume changes on the Dolby audio processor - to all connected websocket
+ * clients.
+ * 
+ * @see API.md
+ */
 public class CinemaWebSocketServer extends WebSocketServer
 		implements IDolbyStatusUpdateReceiver, IJniorStatusUpdateReceiver {
 
+	/**
+	 * Google JSON instance to convert Java objects into JSON objects.
+	 * {@link https://github.com/google/gson/blob/master/UserGuide.md}
+	 */
 	private Gson gson;
-	private BaseSocketServer<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolby;
-	private BaseSocketServer<JniorSocketCommands, IJniorStatusUpdateReceiver> jnior;
 
+	/**
+	 * Socket connection and protocol handler for the Dolby CP750.
+	 */
+	private BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolby;
+
+	/**
+	 * Socket connection and protocol handler fot the Integ Jnior 310 automation
+	 * box.
+	 */
+	private BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver> jnior;
+
+	/**
+	 * List of JSON protocol incoming command handlers. Incoming messages on the
+	 * WebSockets are passed to the handlers until one claims responsibility for
+	 * the packet.
+	 */
 	private LinkedList<IWebSocketMessageHandler> messageHandlers;
 
-	public CinemaWebSocketServer(int port, BaseSocketServer<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolby,
-			BaseSocketServer<JniorSocketCommands, IJniorStatusUpdateReceiver> jnior) {
+	/**
+	 * Creates a CinemaWebSocketServer on the desired port.
+	 * 
+	 * @param port
+	 *            The desired server port to listen on.
+	 * @param dolby
+	 *            Instance of Dolby socket client.
+	 * @param jnior
+	 *            Instance of Jnior socket client.
+	 */
+	public CinemaWebSocketServer(int port, BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolby,
+			BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver> jnior) {
 		super(new InetSocketAddress(port));
 
 		this.gson = new Gson();
@@ -41,10 +77,12 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 		// Start listening for dolby events.
 		this.dolby = dolby;
+		// Start listening for Dolby events like volume changes.
 		dolby.getCommands().registerListener(this);
 		messageHandlers.add(dolby.getCommands());
 
 		this.jnior = jnior;
+		// Start listening for Jnior events like connection updates.
 		jnior.getCommands().registerListener(this);
 		messageHandlers.add(jnior.getCommands());
 	}
@@ -54,12 +92,17 @@ public class CinemaWebSocketServer extends WebSocketServer
 		System.out.println("WebSocket: " + conn.getRemoteSocketAddress().getAddress().getHostAddress() + " connected!");
 
 		// Inform the new client of the current status.
+
+		// Let the client know if we were able to connect to the Dolby audio
+		// processor.
 		conn.send(gson.toJson(new DolbyConnectionMessage(dolby.isConnected())));
 		if (dolby.isConnected()) {
+			// If we're connected, send the current status too.
 			conn.send(gson.toJson(new VolumeChangedMessage(dolby.getCommands().getVolume())));
 			conn.send(gson.toJson(new MuteStatusChangedMessage(dolby.getCommands().isMuted())));
 		}
 
+		// Also tell the client if we have a connection to the Jnior box.
 		conn.send(gson.toJson(new LightsConnectionMessage(jnior.isConnected())));
 	}
 
@@ -86,22 +129,38 @@ public class CinemaWebSocketServer extends WebSocketServer
 		System.out.println("WebSocket: " + conn + ": " + message);
 
 		try {
-			BaseMessage msg_type = gson.fromJson(message, BaseMessage.class);
+			// Try to parse this message as JSON and try to extract the message
+			// type.
+			BaseMessage baseMsg = gson.fromJson(message, BaseMessage.class);
 
+			// Make sure the required fields are set in the JSON object.
+			if (baseMsg.getMessageType() == null || baseMsg.getAction() == null) {
+				System.err.println(
+						"Websocket: Invalid JSON message from " + conn + " (missing required fields): " + message);
+				conn.send(gson.toJson(new ErrorMessage(
+						"Malformed message. Messages MUST include a \"msg_type\" and an \"action\".")));
+				return;
+			}
+
+			// Run through all handlers and see if one of them knows what to do
+			// with that message.
 			try {
 				for (IWebSocketMessageHandler handler : messageHandlers) {
-					if (handler.onMessage(msg_type, message))
+					if (handler.onMessage(baseMsg, message))
 						return;
 				}
 
 			} catch (WebSocketCommandException e) {
+				// Tell the client why the command failed.
 				conn.send(gson.toJson(new ErrorMessage(e.getMessage())));
 				return;
 			}
 
-			System.err.println("Websocket: Invalid command from " + conn + ": " + message);
+			// No message handler was able to handle that message. Tell the
+			// client!
+			System.err.println("Websocket: Unhandled command from " + conn + ": " + message);
 			conn.send(gson.toJson(
-					new ErrorMessage("Invalid command: " + msg_type.getMessageType() + " - " + msg_type.getAction())));
+					new ErrorMessage("Unhandled command: " + baseMsg.getMessageType() + " - " + baseMsg.getAction())));
 		} catch (JsonSyntaxException e) {
 			System.err.println("Websocket: Error parsing message from " + conn + ": " + e.getMessage());
 			conn.send(gson.toJson(new ErrorMessage(e.getMessage())));
