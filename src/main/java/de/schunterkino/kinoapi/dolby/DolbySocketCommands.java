@@ -214,6 +214,10 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 	}
 
 	private void updateVolumeValue(int volume) {
+		// Don't inform if the volume didn't change.
+		if (this.volume == volume)
+			return;
+
 		this.volume = volume;
 
 		// Notify listeners.
@@ -225,6 +229,10 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 	}
 
 	private void updateMuteStatus(boolean muted) {
+		// Don't inform if the status didn't change.
+		if (this.muted == muted)
+			return;
+
 		this.muted = muted;
 
 		// Notify listeners.
