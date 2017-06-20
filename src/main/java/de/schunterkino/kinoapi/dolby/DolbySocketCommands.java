@@ -69,7 +69,10 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 					if (ret == null)
 						continue;
 
-					System.out.println("Dolby: Current command: " + currentCommand.cmd + ". Received: " + ret.trim());
+					// Don't spam the commands that are sent every 5 seconds.
+					if (currentCommand.cmd != Commands.GetVolume && currentCommand.cmd != Commands.GetMuteStatus)
+						System.out
+								.println("Dolby: Current command: " + currentCommand.cmd + ". Received: " + ret.trim());
 
 					Matcher matcher;
 					switch (currentCommand.cmd) {
@@ -152,7 +155,9 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 
 				if (command != null) {
 					socket.getOutputStream().write((command + "\r\n").getBytes(Charset.forName("ascii")));
-					System.out.println("Dolby: Sent: " + command);
+					// Don't spam the commands that are sent every 5 seconds.
+					if (currentCommand.cmd != Commands.GetVolume && currentCommand.cmd != Commands.GetMuteStatus)
+						System.out.println("Dolby: Sent: " + command);
 				}
 
 				// Wait a bit until processing the next command.
