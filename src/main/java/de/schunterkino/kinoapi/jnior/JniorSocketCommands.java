@@ -4,8 +4,13 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.LinkedList;
 
+import com.google.gson.JsonSyntaxException;
+
 import de.schunterkino.kinoapi.sockets.BaseSocketCommands;
 import de.schunterkino.kinoapi.sockets.CommandContainer;
+import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
+import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
+import de.schunterkino.kinoapi.websocket.messages.SetLightLevelMessage;
 
 public class JniorSocketCommands extends BaseSocketCommands<IJniorStatusUpdateReceiver> {
 
@@ -13,13 +18,13 @@ public class JniorSocketCommands extends BaseSocketCommands<IJniorStatusUpdateRe
 
 	private LinkedList<CommandContainer<Commands>> commandQueue;
 	private CommandContainer<Commands> currentCommand;
-	
+
 	public JniorSocketCommands() {
 		super();
 		this.commandQueue = new LinkedList<>();
 		this.currentCommand = noneCommand;
 	}
-	
+
 	@Override
 	public void run() {
 		// Notify listeners.
@@ -28,7 +33,7 @@ public class JniorSocketCommands extends BaseSocketCommands<IJniorStatusUpdateRe
 				listener.onJniorConnected();
 			}
 		}
-		
+
 		// Go in a loop to process the data on the socket.
 		try {
 			do {
@@ -85,10 +90,31 @@ public class JniorSocketCommands extends BaseSocketCommands<IJniorStatusUpdateRe
 			}
 		}
 	}
-	
+
 	public void setLightLevel(int level) {
 		synchronized (commandQueue) {
 			commandQueue.add(new CommandContainer<>(Commands.SetLightLevel, level));
 		}
+	}
+
+	@Override
+	public boolean onMessage(BaseMessage base_msg, String message)
+			throws WebSocketCommandException, JsonSyntaxException {
+		// Handle all Jnior managed commands.
+		if (!"lights".equals(base_msg.getMessageType()))
+			return false;
+
+		switch (base_msg.getAction()) {
+		case "set_light_level":
+			SetLightLevelMessage setLightLevelMsg = gson.fromJson(message, SetLightLevelMessage.class);
+			if (socket.isConnected())
+				setLightLevel(setLightLevelMsg.getLightLevel());
+			else
+				throw new WebSocketCommandException(
+						"Failed to change light level. No connection to Jnior automation box.");
+			return true;
+		}
+
+		return false;
 	}
 }

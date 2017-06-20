@@ -5,16 +5,22 @@ import java.io.InputStream;
 import java.net.Socket;
 import java.util.LinkedList;
 
-public abstract class BaseSocketCommands<T> implements Runnable {
+import com.google.gson.Gson;
+
+import de.schunterkino.kinoapi.websocket.IWebSocketMessageHandler;
+
+public abstract class BaseSocketCommands<T> implements Runnable, IWebSocketMessageHandler {
 
 	protected Socket socket;
 	protected boolean stop;
 	protected LinkedList<T> listeners;
+	protected Gson gson;
 
 	protected BaseSocketCommands() {
 		this.socket = null;
 		this.stop = false;
 		this.listeners = new LinkedList<>();
+		this.gson = new Gson();
 	}
 
 	public void stop() {

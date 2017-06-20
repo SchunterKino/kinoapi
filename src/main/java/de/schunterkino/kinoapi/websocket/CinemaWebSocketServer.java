@@ -2,6 +2,7 @@ package de.schunterkino.kinoapi.websocket;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.LinkedList;
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -20,9 +21,6 @@ import de.schunterkino.kinoapi.websocket.messages.DolbyConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
 import de.schunterkino.kinoapi.websocket.messages.LightsConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.MuteStatusChangedMessage;
-import de.schunterkino.kinoapi.websocket.messages.SetLightLevelMessage;
-import de.schunterkino.kinoapi.websocket.messages.SetMuteStatusMessage;
-import de.schunterkino.kinoapi.websocket.messages.SetVolumeMessage;
 import de.schunterkino.kinoapi.websocket.messages.VolumeChangedMessage;
 
 public class CinemaWebSocketServer extends WebSocketServer
@@ -32,18 +30,23 @@ public class CinemaWebSocketServer extends WebSocketServer
 	private BaseSocketServer<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolby;
 	private BaseSocketServer<JniorSocketCommands, IJniorStatusUpdateReceiver> jnior;
 
+	private LinkedList<IWebSocketMessageHandler> messageHandlers;
+
 	public CinemaWebSocketServer(int port, BaseSocketServer<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolby,
 			BaseSocketServer<JniorSocketCommands, IJniorStatusUpdateReceiver> jnior) {
 		super(new InetSocketAddress(port));
 
 		this.gson = new Gson();
+		this.messageHandlers = new LinkedList<>();
 
 		// Start listening for dolby events.
 		this.dolby = dolby;
 		dolby.getCommands().registerListener(this);
+		messageHandlers.add(dolby.getCommands());
 
 		this.jnior = jnior;
 		jnior.getCommands().registerListener(this);
+		messageHandlers.add(jnior.getCommands());
 	}
 
 	@Override
@@ -85,75 +88,20 @@ public class CinemaWebSocketServer extends WebSocketServer
 		try {
 			BaseMessage msg_type = gson.fromJson(message, BaseMessage.class);
 
-			switch (msg_type.getMessageType()) {
-			// Handle all Dolby Volume related commands.
-			case "volume":
-				switch (msg_type.getAction()) {
-				case "set_volume":
-					SetVolumeMessage setVolumeMsg = gson.fromJson(message, SetVolumeMessage.class);
-					if (dolby.isConnected())
-						dolby.getCommands().setVolume(setVolumeMsg.getVolume());
-					else
-						conn.send(gson.toJson(
-								new ErrorMessage("Failed to change volume. No connection to Dolby audio processor.")));
-					break;
-
-				case "increase_volume":
-					if (dolby.isConnected())
-						dolby.getCommands().increaseVolume();
-					else
-						conn.send(gson.toJson(new ErrorMessage(
-								"Failed to increase volume. No connection to Dolby audio processor.")));
-
-					break;
-
-				case "decrease_volume":
-					if (dolby.isConnected())
-						dolby.getCommands().decreaseVolume();
-					else
-						conn.send(gson.toJson(new ErrorMessage(
-								"Failed to decrease volume. No connection to Dolby audio processor.")));
-
-					break;
-				case "set_mute_status":
-					SetMuteStatusMessage setMuteStatusMsg = gson.fromJson(message, SetMuteStatusMessage.class);
-					if (dolby.isConnected())
-						dolby.getCommands().setMuted(setMuteStatusMsg.isMuted());
-					else
-						conn.send(gson.toJson(new ErrorMessage(
-								"Failed to change mute state. No connection to Dolby audio processor.")));
-
-					break;
-
-				default:
-					System.err.println("Websocket: Invalid command from " + conn + ": " + message);
-					conn.send(gson.toJson(new ErrorMessage(
-							"Invalid command: " + msg_type.getMessageType() + " -> " + msg_type.getAction())));
+			try {
+				for (IWebSocketMessageHandler handler : messageHandlers) {
+					if (handler.onMessage(msg_type, message))
+						return;
 				}
-				break;
 
-			case "lights":
-				switch (msg_type.getAction()) {
-				case "set_light_level":
-					SetLightLevelMessage setLightLevelMsg = gson.fromJson(message, SetLightLevelMessage.class);
-					if (jnior.isConnected())
-						jnior.getCommands().setLightLevel(setLightLevelMsg.getLightLevel());
-					else
-						conn.send(gson.toJson(new ErrorMessage(
-								"Failed to change light level. No connection to Jnior automation box.")));
-					break;
-				default:
-					System.err.println("Websocket: Invalid command from " + conn + ": " + message);
-					conn.send(gson.toJson(new ErrorMessage(
-							"Invalid command: " + msg_type.getMessageType() + " -> " + msg_type.getAction())));
-				}
-				break;
-
-			default:
-				System.err.println("Websocket: Invalid command from " + conn + ": " + message);
-				conn.send(gson.toJson(new ErrorMessage(
-						"Invalid command: " + msg_type.getMessageType() + " -> " + msg_type.getAction())));
+			} catch (WebSocketCommandException e) {
+				conn.send(gson.toJson(new ErrorMessage(e.getMessage())));
+				return;
 			}
+
+			System.err.println("Websocket: Invalid command from " + conn + ": " + message);
+			conn.send(gson.toJson(
+					new ErrorMessage("Invalid command: " + msg_type.getMessageType() + " - " + msg_type.getAction())));
 		} catch (JsonSyntaxException e) {
 			System.err.println("Websocket: Error parsing message from " + conn + ": " + e.getMessage());
 			conn.send(gson.toJson(new ErrorMessage(e.getMessage())));

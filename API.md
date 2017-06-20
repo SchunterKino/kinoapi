@@ -2,9 +2,10 @@
 
 When a websocket connection to the server on port 8641 is opened the server sends messages about the current status of the system right away, namely:
 
- * `dolby_connection` - If the audio processor is available.
+ * `dolby_connection` - Indicate if the audio processor is available.
    * `volume_changed` - Current volume level. *Only sent if the Dolby connection is available.*
    * `mute_status_changed` - Current mute status. *Only sent if the Dolby connection is available.*
+ * `lights_connection` - Indicate if the Jnior connection for light regulation is available.
 
 ## Message format
 Every message is encoded as a JSON object containing at least a `msg_type` and an `action` string attribute.

@@ -8,8 +8,14 @@ import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.gson.JsonSyntaxException;
+
 import de.schunterkino.kinoapi.sockets.BaseSocketCommands;
 import de.schunterkino.kinoapi.sockets.CommandContainer;
+import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
+import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
+import de.schunterkino.kinoapi.websocket.messages.SetMuteStatusMessage;
+import de.schunterkino.kinoapi.websocket.messages.SetVolumeMessage;
 
 public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateReceiver> {
 
@@ -227,5 +233,53 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 				listener.onMuteStatusChanged(muted);
 			}
 		}
+	}
+
+	@Override
+	public boolean onMessage(BaseMessage base_msg, String message)
+			throws WebSocketCommandException, JsonSyntaxException {
+		// Handle all Dolby Volume related commands.
+		if (!"volume".equals(base_msg.getMessageType()))
+			return false;
+
+		switch (base_msg.getAction()) {
+		case "set_volume":
+			SetVolumeMessage setVolumeMsg = gson.fromJson(message, SetVolumeMessage.class);
+			if (socket.isConnected())
+				setVolume(setVolumeMsg.getVolume());
+			else
+				throw new WebSocketCommandException("Failed to change volume. No connection to Dolby audio processor.");
+			return true;
+
+		case "increase_volume":
+			if (socket.isConnected())
+				increaseVolume();
+			else
+				throw new WebSocketCommandException(
+						"Failed to increase volume. No connection to Dolby audio processor.");
+
+			return true;
+
+		case "decrease_volume":
+			if (socket.isConnected())
+				decreaseVolume();
+			else
+				throw new WebSocketCommandException(
+						"Failed to decrease volume. No connection to Dolby audio processor.");
+
+			return true;
+
+		case "set_mute_status":
+			SetMuteStatusMessage setMuteStatusMsg = gson.fromJson(message, SetMuteStatusMessage.class);
+			if (socket.isConnected())
+				setMuted(setMuteStatusMsg.isMuted());
+			else
+				throw new WebSocketCommandException(
+						"Failed to change mute state. No connection to Dolby audio processor.");
+
+			return true;
+		}
+
+		return false;
 	}
 }

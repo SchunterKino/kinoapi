@@ -23,17 +23,20 @@ public class App {
 	public static void main(String[] args) {
 
 		// Setup the Dolby CP750 connection.
-		BaseSocketServer<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolbyConnection = new BaseSocketServer<>(DOLBY_IP, DOLBY_PORT, "Dolby", DolbySocketCommands.class);
+		BaseSocketServer<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolbyConnection = new BaseSocketServer<>(
+				DOLBY_IP, DOLBY_PORT, "Dolby", DolbySocketCommands.class);
 		Thread dolbyThread = new Thread(dolbyConnection);
 		dolbyThread.start();
-		
+
 		// Setup the Integ Jnior 310 connection.
-		BaseSocketServer<JniorSocketCommands, IJniorStatusUpdateReceiver> jniorConnection = new BaseSocketServer<>(JNIOR_IP, JNIOR_PORT, "Jnior", JniorSocketCommands.class);
+		BaseSocketServer<JniorSocketCommands, IJniorStatusUpdateReceiver> jniorConnection = new BaseSocketServer<>(
+				JNIOR_IP, JNIOR_PORT, "Jnior", JniorSocketCommands.class);
 		Thread jniorThread = new Thread(jniorConnection);
 		jniorThread.start();
 
 		// Start the websocket server now.
-		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer(WEBSOCKET_PORT, dolbyConnection, jniorConnection);
+		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer(WEBSOCKET_PORT, dolbyConnection,
+				jniorConnection);
 		websocketServer.start();
 		System.out.println("WebSocket: Server created on port: " + websocketServer.getPort());
 
@@ -74,7 +77,7 @@ public class App {
 				// We want to stop anyways. Errors are ok.
 			}
 			System.out.println("Dolby: Server stopped.");
-			
+
 			try {
 				if (!jniorConnection.isConnected())
 					jniorThread.interrupt();
