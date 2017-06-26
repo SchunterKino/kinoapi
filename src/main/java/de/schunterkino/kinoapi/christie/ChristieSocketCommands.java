@@ -11,6 +11,7 @@ import de.schunterkino.kinoapi.sockets.BaseSocketCommands;
 import de.schunterkino.kinoapi.sockets.CommandContainer;
 import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
+import de.schunterkino.kinoapi.websocket.messages.christie.SetInputModeMessage;
 
 public class ChristieSocketCommands extends BaseSocketCommands<IChristieStatusUpdateReceiver> {
 
@@ -106,7 +107,7 @@ public class ChristieSocketCommands extends BaseSocketCommands<IChristieStatusUp
 			}
 		}
 	}
-	
+
 	private void addCommand(Command cmd) {
 		synchronized (commandQueue) {
 			// Make sure this is the only command of that type in the queue.
@@ -173,29 +174,29 @@ public class ChristieSocketCommands extends BaseSocketCommands<IChristieStatusUp
 			else
 				throw new WebSocketCommandException("Failed to close the douser. No connection to Christie projector.");
 			return true;
-		case "format_cinema_flat":
-			if (socket.isConnected())
-				addCommand(Command.FormatCinemaFlat);
-			else
-				throw new WebSocketCommandException("Failed to switch to cinema flat input. No connection to Christie projector.");
-			return true;
-		case "format_cinema_scope":
-			if (socket.isConnected())
-				addCommand(Command.FormatCinemaScope);
-			else
-				throw new WebSocketCommandException("Failed to switch to cinema scope input. No connection to Christie projector.");
-			return true;
-		case "format_pc_flat":
-			if (socket.isConnected())
-				addCommand(Command.FormatPCFlat);
-			else
-				throw new WebSocketCommandException("Failed to switch to PC flat input. No connection to Christie projector.");
-			return true;
-		case "format_pc_scope":
-			if (socket.isConnected())
-				addCommand(Command.FormatPCScope);
-			else
-				throw new WebSocketCommandException("Failed to switch to PC scope input. No connection to Christie projector.");
+		case "set_input_mode":
+			if (socket.isConnected()) {
+				SetInputModeMessage setInputModeMsg = gson.fromJson(message, SetInputModeMessage.class);
+				switch (setInputModeMsg.getInputMode()) {
+				case "cinema_flat":
+					addCommand(Command.FormatCinemaFlat);
+					break;
+				case "cinema_scope":
+					addCommand(Command.FormatCinemaScope);
+					break;
+				case "pc_flat":
+					addCommand(Command.FormatPCFlat);
+					break;
+				case "pc_scope":
+					addCommand(Command.FormatPCScope);
+					break;
+				default:
+					throw new WebSocketCommandException(
+							"Invalid projector input mode: " + setInputModeMsg.getInputMode());
+				}
+			} else
+				throw new WebSocketCommandException(
+						"Failed to switch to cinema flat input. No connection to Christie projector.");
 			return true;
 		}
 

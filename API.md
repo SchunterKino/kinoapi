@@ -140,22 +140,12 @@ Close the douser.
  * `msg_type` - string: `playback`
  * `action` - string: `douser_close`
 
-#### Change input source to Cinema Flat
-Set the input source to the IMB in flat resolution.
+#### Change input source
+Select the input source to display the image from including the screen ratio.
  * `msg_type` - string: `playback`
- * `action` - string: `format_cinema_flat`
-
-#### Change input source to Cinema Scope
-Set the input source to the IMB in scope resolution.
- * `msg_type` - string: `playback`
- * `action` - string: `format_cinema_scope`
-
-#### Change input source to PC flat
-Set the input source to the PC (DVI-A) in flat resolution.
- * `msg_type` - string: `playback`
- * `action` - string: `format_pc_flat`
-
-#### Change input source to PC scope
-Set the input source to the PC (DVI-A) in scope resolution.
- * `msg_type` - string: `playback`
- * `action` - string: `format_pc_scope`
+ * `action` - string: `set_input_mode`
+ * `mode` - string: The image source channel to select:
+   * `cinema_flat` - IMB image in flat ratio.
+   * `cinema_scope` - IMB image in scope ratio.
+   * `pc_flat` - Computer image in flat ratio.
+   * `pc_scope` - Computer image in scope ratio.
