@@ -6,7 +6,7 @@ public class ChristieConnectionMessage extends BaseMessage {
 	public boolean connected;
 
 	public ChristieConnectionMessage(boolean connected) {
-		super("playback", "projector_connected");
+		super("playback", "projector_connection");
 		this.connected = connected;
 	}
 }
