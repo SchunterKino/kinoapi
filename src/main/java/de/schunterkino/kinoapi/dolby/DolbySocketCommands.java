@@ -41,7 +41,7 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 	// Input mode
 	// This list must match the InputMode enum.
 	private static final List<String> inputModeNames = Arrays.asList("dig_1", "dig_2", "dig_3", "dig_4", "analog",
-			"non_sync");
+			"non_sync", "mic", "last");
 	private Pattern inputModePattern;
 	private InputMode inputMode;
 	private Instant lastGetInputMode;
@@ -124,7 +124,12 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 							String inputMode = matcher.group(1);
 							if (inputMode != null) {
 								int ordInputMode = inputModeNames.indexOf(inputMode);
-								updateInputMode(InputMode.values()[ordInputMode]);
+								if (ordInputMode != -1) {
+									updateInputMode(InputMode.values()[ordInputMode]);
+								}
+								else {
+									System.err.printf("Dolby: Received invalid input_mode: %s%n", inputMode);
+								}
 								currentCommand = noneCommand;
 							}
 						}

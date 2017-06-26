@@ -47,7 +47,7 @@ Sent when the sound was muted or unmuted.
 Sent when the audio input source changed.
  * `msg_type` - string: `volume`
  * `action` - string: `input_mode_changed`
- * `mode` - int: `0-3`: Digital 1-4, `4`: Analog, `5`: NonSync.
+ * `mode` - int: `0-3`: Digital 1-4, `4`: Analog, `5`: NonSync, `6`: Microphone, `7`: Last setting on power off.
 
 ### Integ Jnior 310
 #### Connection availability
@@ -87,7 +87,7 @@ Set the audio input source to the specified mode.
 This triggers a `input_mode_changed` notification on all connected clients when the input mode was changed.
  * `msg_type` - string: `volume`
  * `action` - string: `set_input_mode`
- * `mode` - int: `0-3`: Digital 1-4, `4`: Analog, `5`: NonSync.
+ * `mode` - int: `0-3`: Digital 1-4, `4`: Analog, `5`: NonSync, `6`: Microphone, `7`: Last setting on power off.
 
 ### Integ Jnior 310
 #### Change light intensity
