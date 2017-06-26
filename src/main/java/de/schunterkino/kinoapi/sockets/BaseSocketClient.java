@@ -14,7 +14,6 @@ public class BaseSocketClient<T extends BaseSocketCommands<S>, S> implements Run
 	private SocketAddress socketAddress;
 	private Socket socket;
 	private T commands;
-	private boolean connected;
 	private boolean stop;
 
 	public BaseSocketClient(String ip, int port, String log_tag, Class<T> typeArgumentClass) {
@@ -29,7 +28,6 @@ public class BaseSocketClient<T extends BaseSocketCommands<S>, S> implements Run
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		this.connected = false;
 		this.stop = false;
 	}
 
@@ -42,7 +40,6 @@ public class BaseSocketClient<T extends BaseSocketCommands<S>, S> implements Run
 					socket = new Socket();
 					socket.connect(socketAddress, 5000);
 					socket.setSoTimeout(5000);
-					connected = true;
 
 					// Start a thread to handle telnet messages.
 					commands.setSocket(socket);
@@ -77,8 +74,6 @@ public class BaseSocketClient<T extends BaseSocketCommands<S>, S> implements Run
 				System.err.printf("%s: Error while closing connection: %s%n", log_tag, e.getMessage());
 			}
 
-			connected = false;
-
 			if (stop)
 				break;
 
@@ -93,7 +88,7 @@ public class BaseSocketClient<T extends BaseSocketCommands<S>, S> implements Run
 	}
 
 	public boolean isConnected() {
-		return connected;
+		return socket != null && socket.isConnected() && !socket.isClosed();
 	}
 
 	public T getCommands() {
