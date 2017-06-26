@@ -1,4 +1,6 @@
-package de.schunterkino.kinoapi.websocket.messages;
+package de.schunterkino.kinoapi.websocket.messages.jnior;
+
+import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 
 public class LightsConnectionMessage extends BaseMessage {
 	public boolean connected;

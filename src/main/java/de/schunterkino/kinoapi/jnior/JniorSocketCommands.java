@@ -11,7 +11,7 @@ import de.schunterkino.kinoapi.sockets.BaseSocketCommands;
 import de.schunterkino.kinoapi.sockets.CommandContainer;
 import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
-import de.schunterkino.kinoapi.websocket.messages.SetLightLevelMessage;
+import de.schunterkino.kinoapi.websocket.messages.jnior.SetLightLevelMessage;
 
 public class JniorSocketCommands extends BaseSocketCommands<IJniorStatusUpdateReceiver> {
 

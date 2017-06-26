@@ -18,12 +18,12 @@ import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
-import de.schunterkino.kinoapi.websocket.messages.DolbyConnectionMessage;
-import de.schunterkino.kinoapi.websocket.messages.InputModeChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
-import de.schunterkino.kinoapi.websocket.messages.LightsConnectionMessage;
-import de.schunterkino.kinoapi.websocket.messages.MuteStatusChangedMessage;
-import de.schunterkino.kinoapi.websocket.messages.VolumeChangedMessage;
+import de.schunterkino.kinoapi.websocket.messages.jnior.LightsConnectionMessage;
+import de.schunterkino.kinoapi.websocket.messages.volume.DolbyConnectionMessage;
+import de.schunterkino.kinoapi.websocket.messages.volume.InputModeChangedMessage;
+import de.schunterkino.kinoapi.websocket.messages.volume.MuteStatusChangedMessage;
+import de.schunterkino.kinoapi.websocket.messages.volume.VolumeChangedMessage;
 
 /**
  * WebSocket server class which serves the documented JSON API. This class acts

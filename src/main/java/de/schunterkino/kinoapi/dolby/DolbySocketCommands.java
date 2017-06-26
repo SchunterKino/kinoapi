@@ -17,9 +17,9 @@ import de.schunterkino.kinoapi.sockets.BaseSocketCommands;
 import de.schunterkino.kinoapi.sockets.CommandContainer;
 import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
-import de.schunterkino.kinoapi.websocket.messages.SetInputModeMessage;
-import de.schunterkino.kinoapi.websocket.messages.SetMuteStatusMessage;
-import de.schunterkino.kinoapi.websocket.messages.SetVolumeMessage;
+import de.schunterkino.kinoapi.websocket.messages.volume.SetInputModeMessage;
+import de.schunterkino.kinoapi.websocket.messages.volume.SetMuteStatusMessage;
+import de.schunterkino.kinoapi.websocket.messages.volume.SetVolumeMessage;
 
 public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateReceiver> {
 

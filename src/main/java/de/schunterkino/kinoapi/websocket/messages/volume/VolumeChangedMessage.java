@@ -1,4 +1,6 @@
-package de.schunterkino.kinoapi.websocket.messages;
+package de.schunterkino.kinoapi.websocket.messages.volume;
+
+import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 
 public class VolumeChangedMessage extends BaseMessage {
 	public int volume;
