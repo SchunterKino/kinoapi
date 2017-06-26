@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import de.schunterkino.kinoapi.christie.ChristieSocketCommands;
+import de.schunterkino.kinoapi.christie.IChristieStatusUpdateReceiver;
 import de.schunterkino.kinoapi.dolby.DolbySocketCommands;
 import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
@@ -35,9 +37,15 @@ public class App {
 		Thread jniorThread = new Thread(jniorConnection);
 		jniorThread.start();
 
+		// Setup the Christie Projection connection.
+		BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver> christieConnection = new BaseSocketClient<>(
+				CHRISTIE_IMB_IP, CHRISTIE_IMB_PORT, "Christie", ChristieSocketCommands.class);
+		Thread christieThread = new Thread(christieConnection);
+		christieThread.start();
+
 		// Start the websocket server now.
 		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer(WEBSOCKET_PORT, dolbyConnection,
-				jniorConnection);
+				jniorConnection, christieConnection);
 		websocketServer.start();
 		System.out.println("WebSocket: Server created on port: " + websocketServer.getPort());
 
@@ -60,6 +68,7 @@ public class App {
 			// Cleanup!
 			dolbyConnection.stopServer();
 			jniorConnection.stopServer();
+			christieConnection.stopServer();
 
 			// Shutdown the servers.
 			try {
@@ -77,7 +86,7 @@ public class App {
 			} catch (InterruptedException e) {
 				// We want to stop anyways. Errors are ok.
 			}
-			System.out.println("Dolby: Server stopped.");
+			System.out.println("Dolby: Client stopped.");
 
 			try {
 				if (!jniorConnection.isConnected())
@@ -86,7 +95,16 @@ public class App {
 			} catch (InterruptedException e) {
 				// We want to stop anyways. Errors are ok.
 			}
-			System.out.println("Jnior: Server stopped.");
+			System.out.println("Jnior: Client stopped.");
+
+			try {
+				if (!christieConnection.isConnected())
+					christieThread.interrupt();
+				christieThread.join();
+			} catch (InterruptedException e) {
+				// We want to stop anyways. Errors are ok.
+			}
+			System.out.println("Christie: Client stopped.");
 		}
 	}
 }

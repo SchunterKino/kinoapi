@@ -11,6 +11,8 @@ import org.java_websocket.server.WebSocketServer;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
+import de.schunterkino.kinoapi.christie.ChristieSocketCommands;
+import de.schunterkino.kinoapi.christie.IChristieStatusUpdateReceiver;
 import de.schunterkino.kinoapi.dolby.DolbySocketCommands;
 import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
 import de.schunterkino.kinoapi.dolby.InputMode;
@@ -19,6 +21,7 @@ import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
+import de.schunterkino.kinoapi.websocket.messages.christie.ChristieConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.jnior.LightsConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.DolbyConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.InputModeChangedMessage;
@@ -34,7 +37,7 @@ import de.schunterkino.kinoapi.websocket.messages.volume.VolumeChangedMessage;
  * @see API.md
  */
 public class CinemaWebSocketServer extends WebSocketServer
-		implements IDolbyStatusUpdateReceiver, IJniorStatusUpdateReceiver {
+		implements IDolbyStatusUpdateReceiver, IJniorStatusUpdateReceiver, IChristieStatusUpdateReceiver {
 
 	/**
 	 * Google JSON instance to convert Java objects into JSON objects.
@@ -48,10 +51,15 @@ public class CinemaWebSocketServer extends WebSocketServer
 	private BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolby;
 
 	/**
-	 * Socket connection and protocol handler fot the Integ Jnior 310 automation
+	 * Socket connection and protocol handler for the Integ Jnior 310 automation
 	 * box.
 	 */
 	private BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver> jnior;
+
+	/**
+	 * Socket connection to trigger global triggers on the Christie IMB.
+	 */
+	private BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver> christie;
 
 	/**
 	 * List of JSON protocol incoming command handlers. Incoming messages on the
@@ -71,7 +79,8 @@ public class CinemaWebSocketServer extends WebSocketServer
 	 *            Instance of Jnior socket client.
 	 */
 	public CinemaWebSocketServer(int port, BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolby,
-			BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver> jnior) {
+			BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver> jnior,
+			BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver> christie) {
 		super(new InetSocketAddress(port));
 
 		this.gson = new Gson();
@@ -87,6 +96,11 @@ public class CinemaWebSocketServer extends WebSocketServer
 		// Start listening for Jnior events like connection updates.
 		jnior.getCommands().registerListener(this);
 		messageHandlers.add(jnior.getCommands());
+
+		this.christie = christie;
+		// Start listening for Christie IMB events like connection updates.
+		christie.getCommands().registerListener(this);
+		messageHandlers.add(christie.getCommands());
 	}
 
 	@Override
@@ -107,6 +121,9 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 		// Also tell the client if we have a connection to the Jnior box.
 		conn.send(gson.toJson(new LightsConnectionMessage(jnior.isConnected())));
+
+		// And if the projector is up.
+		conn.send(gson.toJson(new ChristieConnectionMessage(christie.isConnected())));
 	}
 
 	@Override
@@ -239,6 +256,18 @@ public class CinemaWebSocketServer extends WebSocketServer
 	@Override
 	public void onInputModeChanged(InputMode mode) {
 		InputModeChangedMessage msg = new InputModeChangedMessage(mode);
+		sendToAll(gson.toJson(msg));
+	}
+
+	@Override
+	public void onChristieConnected() {
+		ChristieConnectionMessage msg = new ChristieConnectionMessage(true);
+		sendToAll(gson.toJson(msg));
+	}
+
+	@Override
+	public void onChristieDisconnected() {
+		ChristieConnectionMessage msg = new ChristieConnectionMessage(false);
 		sendToAll(gson.toJson(msg));
 	}
 }

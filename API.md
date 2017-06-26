@@ -7,6 +7,7 @@ When a websocket connection to the server on port 8641 is opened the server send
    * `mute_status_changed` - Current mute status. *Only sent if the Dolby connection is available.*
    * `input_mode_changed` - Current active input mode. *Only sent if the Dolby connection is available.*
  * `lights_connection` - Indicate if the Jnior connection for light regulation is available.
+ * `projector_connection` - Indicate if the Christie IMB connection for projector control is available.
 
 ## Message format
 Every message is encoded as a JSON object containing at least a `msg_type` and an `action` string attribute.
@@ -51,10 +52,17 @@ Sent when the audio input source changed.
 
 ### Integ Jnior 310
 #### Connection availability
-Sent when the jnior box for lights gets connected or disconnected.
+Sent when the Jnior box for lights gets connected or disconnected.
  * `msg_type` - string: `lights`
  * `action` - string: `lights_connection`
  * `connected` - boolean: `true` if connection to Jnior 310 is available, `false` otherwise.
+
+### Christie IMB-S2
+#### Connection availability
+Sent when the Christie Projector for playback control gets connected or disconnected.
+ * `msg_type` - string: `playback`
+ * `action` - string: `projector_connection`
+ * `connected` - boolean: `true` if connection to Christie IMB-S2 is available, `false` otherwise.
 
 ## Client -> Server
 ### Dolby CP750 Audio
@@ -95,3 +103,39 @@ Change the volume to the specified level.
  * `msg_type` - string: `lights`
  * `action` - string: `set_light_level`
  * `level` - int: The light intensity to choose as a value from 0-3. 0 = 0%, 1 = 33%, 2 = 66% and 3 = 100%.
+
+### Christie IMB-S2
+#### Start/resume content playback
+Starts playing the currently loaded content.
+ * `msg_type` - string: `playback`
+ * `action` - string: `play`
+
+#### Pause content playback
+Pauses playing the currently loaded content.
+ * `msg_type` - string: `playback`
+ * `action` - string: `pause`
+
+#### Stop content playback
+Stops playing the currently loaded content.
+ * `msg_type` - string: `playback`
+ * `action` - string: `stop`
+
+#### Turn lamp on
+Turn on the lamp.
+ * `msg_type` - string: `playback`
+ * `action` - string: `lamp_on`
+
+#### Turn lamp off
+Start cooling the lamp.
+ * `msg_type` - string: `playback`
+ * `action` - string: `lamp_off`
+
+#### Open the douser
+Open the douser.
+ * `msg_type` - string: `playback`
+ * `action` - string: `douser_open`
+
+#### Close the douser
+Close the douser.
+ * `msg_type` - string: `playback`
+ * `action` - string: `douser_close`
