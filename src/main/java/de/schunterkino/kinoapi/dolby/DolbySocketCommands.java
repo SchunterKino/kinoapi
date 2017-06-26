@@ -93,6 +93,7 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 					Matcher matcher;
 					switch (currentCommand.cmd) {
 					case GetVolume:
+					case SetVolume:
 						// Parse the response
 						matcher = faderPattern.matcher(ret);
 						// Wait until we get the desired response.
@@ -105,6 +106,7 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 						}
 						break;
 					case GetMuteStatus:
+					case SetMuteStatus:
 						// Parse the response
 						matcher = mutePattern.matcher(ret);
 						// Wait until we get the desired response.
@@ -117,6 +119,7 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 						}
 						break;
 					case GetInputMode:
+					case SetInputMode:
 						// Parse the response
 						matcher = inputModePattern.matcher(ret);
 						// Wait until we get the desired response.
@@ -242,8 +245,6 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 
 	public void setVolume(int volume) {
 		addCommand(Commands.SetVolume, volume);
-		// Get the new volume right away afterwards.
-		addCommand(Commands.GetVolume);
 	}
 
 	public boolean isMuted() {
@@ -252,8 +253,6 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 
 	public void setMuted(boolean muted) {
 		addCommand(Commands.SetMuteStatus, muted ? 1 : 0);
-		// Get the new status right away afterwards.
-		addCommand(Commands.GetMuteStatus);
 	}
 
 	public InputMode getInputMode() {
@@ -262,8 +261,6 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 
 	public void setInputMode(InputMode mode) {
 		addCommand(Commands.SetInputMode, mode.ordinal());
-		// Get the new mode right away afterwards.
-		addCommand(Commands.GetInputMode);
 	}
 
 	private void addCommand(Commands cmd, int value) {
