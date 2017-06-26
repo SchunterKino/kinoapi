@@ -70,6 +70,18 @@ public class ChristieSocketCommands extends BaseSocketCommands<IChristieStatusUp
 				case DouserClose:
 					command = "DouserClose";
 					break;
+				case FormatCinemaFlat:
+					command = "CinemaFlat";
+					break;
+				case FormatCinemaScope:
+					command = "CinemaScope";
+					break;
+				case FormatPCFlat:
+					command = "ComputerFlat";
+					break;
+				case FormatPCScope:
+					command = "ComputerScope";
+					break;
 				}
 
 				if (command != null) {
@@ -123,43 +135,67 @@ public class ChristieSocketCommands extends BaseSocketCommands<IChristieStatusUp
 			if (socket.isConnected())
 				addCommand(Command.Play);
 			else
-				throw new WebSocketCommandException("Failed play content. No connection to Christie projector.");
+				throw new WebSocketCommandException("Failed to play content. No connection to Christie projector.");
 			return true;
 		case "pause":
 			if (socket.isConnected())
 				addCommand(Command.Pause);
 			else
-				throw new WebSocketCommandException("Failed pause content. No connection to Christie projector.");
+				throw new WebSocketCommandException("Failed to pause content. No connection to Christie projector.");
 			return true;
 		case "stop":
 			if (socket.isConnected())
 				addCommand(Command.Stop);
 			else
-				throw new WebSocketCommandException("Failed stop content. No connection to Christie projector.");
+				throw new WebSocketCommandException("Failed to stop content. No connection to Christie projector.");
 			return true;
 		case "lamp_on":
 			if (socket.isConnected())
 				addCommand(Command.LampOn);
 			else
-				throw new WebSocketCommandException("Failed turn lamp on. No connection to Christie projector.");
+				throw new WebSocketCommandException("Failed to turn lamp on. No connection to Christie projector.");
 			return true;
 		case "lamp_off":
 			if (socket.isConnected())
 				addCommand(Command.LampOff);
 			else
-				throw new WebSocketCommandException("Failed failed to turn lamp off. No connection to Christie projector.");
+				throw new WebSocketCommandException("Failed to turn lamp off. No connection to Christie projector.");
 			return true;
 		case "douser_open":
 			if (socket.isConnected())
 				addCommand(Command.DouserOpen);
 			else
-				throw new WebSocketCommandException("Failed open the douser. No connection to Christie projector.");
+				throw new WebSocketCommandException("Failed to open the douser. No connection to Christie projector.");
 			return true;
 		case "douser_close":
 			if (socket.isConnected())
 				addCommand(Command.DouserClose);
 			else
-				throw new WebSocketCommandException("Failed close the douser. No connection to Christie projector.");
+				throw new WebSocketCommandException("Failed to close the douser. No connection to Christie projector.");
+			return true;
+		case "format_cinema_flat":
+			if (socket.isConnected())
+				addCommand(Command.FormatCinemaFlat);
+			else
+				throw new WebSocketCommandException("Failed to switch to cinema flat input. No connection to Christie projector.");
+			return true;
+		case "format_cinema_scope":
+			if (socket.isConnected())
+				addCommand(Command.FormatCinemaScope);
+			else
+				throw new WebSocketCommandException("Failed to switch to cinema scope input. No connection to Christie projector.");
+			return true;
+		case "format_pc_flat":
+			if (socket.isConnected())
+				addCommand(Command.FormatPCFlat);
+			else
+				throw new WebSocketCommandException("Failed to switch to PC flat input. No connection to Christie projector.");
+			return true;
+		case "format_pc_scope":
+			if (socket.isConnected())
+				addCommand(Command.FormatPCScope);
+			else
+				throw new WebSocketCommandException("Failed to switch to PC scope input. No connection to Christie projector.");
 			return true;
 		}
 
