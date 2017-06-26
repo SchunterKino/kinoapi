@@ -161,11 +161,11 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 			// No message handler was able to handle that message. Tell the
 			// client!
-			System.err.println("Websocket: Unhandled command from " + conn + ": " + message);
+			System.err.println("Websocket: Unhandled command from " + prettySocket(conn) + ": " + message);
 			conn.send(gson.toJson(
 					new ErrorMessage("Unhandled command: " + baseMsg.getMessageType() + " - " + baseMsg.getAction())));
 		} catch (JsonSyntaxException e) {
-			System.err.println("Websocket: Error parsing message from " + conn + ": " + e.getMessage());
+			System.err.println("Websocket: Error parsing message from " + prettySocket(conn) + ": " + e.getMessage());
 			conn.send(gson.toJson(new ErrorMessage(e.getMessage())));
 		}
 	}

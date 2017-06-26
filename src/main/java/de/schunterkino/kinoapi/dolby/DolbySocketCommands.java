@@ -23,7 +23,8 @@ import de.schunterkino.kinoapi.websocket.messages.volume.SetVolumeMessage;
 
 public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateReceiver> {
 
-	private CommandContainer<Commands> noneCommand = new CommandContainer<>(Commands.None);
+	private static int UPDATE_INTERVAL = 1000;
+	private static CommandContainer<Commands> noneCommand = new CommandContainer<>(Commands.None);
 
 	private LinkedList<CommandContainer<Commands>> commandQueue;
 	private CommandContainer<Commands> currentCommand;
@@ -153,16 +154,16 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 				// Throw in a GetVolume command from time to time if the
 				// current command is None.
 				if (currentCommand.cmd == Commands.None) {
-					// Get the current volume every 5 seconds.
+					// Get the current volume every UPDATE_INTERVAL seconds.
 					// TODO: Increase the interval if no websocket clients are
 					// connected.
-					if (lastGetVolume == null || Duration.between(lastGetVolume, Instant.now()).toMillis() > 5000)
+					if (lastGetVolume == null || Duration.between(lastGetVolume, Instant.now()).toMillis() > UPDATE_INTERVAL)
 						currentCommand = new CommandContainer<>(Commands.GetVolume);
 					else if (lastGetMuteStatus == null
-							|| Duration.between(lastGetMuteStatus, Instant.now()).toMillis() > 5000)
+							|| Duration.between(lastGetMuteStatus, Instant.now()).toMillis() > UPDATE_INTERVAL)
 						currentCommand = new CommandContainer<>(Commands.GetMuteStatus);
 					else if (lastGetInputMode == null
-							|| Duration.between(lastGetInputMode, Instant.now()).toMillis() > 5000)
+							|| Duration.between(lastGetInputMode, Instant.now()).toMillis() > UPDATE_INTERVAL)
 						currentCommand = new CommandContainer<>(Commands.GetInputMode);
 				}
 
