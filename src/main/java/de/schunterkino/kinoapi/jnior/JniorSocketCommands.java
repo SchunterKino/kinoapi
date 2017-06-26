@@ -2,6 +2,7 @@ package de.schunterkino.kinoapi.jnior;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Iterator;
 import java.util.LinkedList;
 
 import com.google.gson.JsonSyntaxException;
@@ -93,7 +94,22 @@ public class JniorSocketCommands extends BaseSocketCommands<IJniorStatusUpdateRe
 
 	public void setLightLevel(int level) {
 		synchronized (commandQueue) {
-			commandQueue.add(new CommandContainer<>(Commands.SetLightLevel, level));
+			addCommand(Commands.SetLightLevel, level);
+		}
+	}
+
+	private void addCommand(Commands cmd, int value) {
+		synchronized (commandQueue) {
+			// Make sure this is the only command of that type in the queue.
+			Iterator<CommandContainer<Commands>> i = commandQueue.iterator();
+			while (i.hasNext()) {
+				CommandContainer<Commands> command = i.next();
+				if (command.cmd == cmd)
+					i.remove();
+			}
+
+			// Add the new command now.
+			commandQueue.add(new CommandContainer<>(cmd, value));
 		}
 	}
 

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -180,17 +181,17 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 
 	public void increaseVolume() {
 		synchronized (commandQueue) {
-			commandQueue.add(new CommandContainer<>(Commands.IncreaseVolume));
+			addCommand(Commands.IncreaseVolume);
 			// Get the new volume right away afterwards.
-			commandQueue.add(new CommandContainer<>(Commands.GetVolume));
+			addCommand(Commands.GetVolume);
 		}
 	}
 
 	public void decreaseVolume() {
 		synchronized (commandQueue) {
-			commandQueue.add(new CommandContainer<>(Commands.DecreaseVolume));
+			addCommand(Commands.DecreaseVolume);
 			// Get the new volume right away afterwards.
-			commandQueue.add(new CommandContainer<>(Commands.GetVolume));
+			addCommand(Commands.GetVolume);
 		}
 	}
 
@@ -200,9 +201,9 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 
 	public void setVolume(int volume) {
 		synchronized (commandQueue) {
-			commandQueue.add(new CommandContainer<>(Commands.SetVolume, volume));
+			addCommand(Commands.SetVolume, volume);
 			// Get the new volume right away afterwards.
-			commandQueue.add(new CommandContainer<>(Commands.GetVolume));
+			addCommand(Commands.GetVolume);
 		}
 	}
 
@@ -212,10 +213,29 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 
 	public void setMuted(boolean muted) {
 		synchronized (commandQueue) {
-			commandQueue.add(new CommandContainer<>(Commands.SetMuteStatus, muted ? 1 : 0));
+			addCommand(Commands.SetMuteStatus, muted ? 1 : 0);
 			// Get the new status right away afterwards.
-			commandQueue.add(new CommandContainer<>(Commands.GetMuteStatus));
+			addCommand(Commands.GetMuteStatus);
 		}
+	}
+
+	private void addCommand(Commands cmd, int value) {
+		synchronized (commandQueue) {
+			// Make sure this is the only command of that type in the queue.
+			Iterator<CommandContainer<Commands>> i = commandQueue.iterator();
+			while (i.hasNext()) {
+				CommandContainer<Commands> command = i.next();
+				if (command.cmd == cmd)
+					i.remove();
+			}
+
+			// Add the new command now.
+			commandQueue.add(new CommandContainer<>(cmd, value));
+		}
+	}
+
+	private void addCommand(Commands cmd) {
+		addCommand(cmd, 0);
 	}
 
 	private void updateVolumeValue(int volume) {
