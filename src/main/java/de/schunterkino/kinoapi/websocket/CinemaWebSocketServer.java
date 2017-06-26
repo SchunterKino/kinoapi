@@ -187,6 +187,9 @@ public class CinemaWebSocketServer extends WebSocketServer
 		Collection<WebSocket> con = connections();
 		synchronized (con) {
 			for (WebSocket c : con) {
+				// Only send to fully connected websockets.
+				if (!c.isOpen())
+					continue;
 				c.send(text);
 			}
 		}
