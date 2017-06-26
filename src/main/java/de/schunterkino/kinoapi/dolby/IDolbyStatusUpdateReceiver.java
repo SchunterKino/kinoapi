@@ -8,4 +8,6 @@ public interface IDolbyStatusUpdateReceiver {
 	void onVolumeChanged(int volume);
 
 	void onMuteStatusChanged(boolean muted);
+
+	void onInputModeChanged(InputMode mode);
 }

@@ -5,6 +5,7 @@ When a websocket connection to the server on port 8641 is opened the server send
  * `dolby_connection` - Indicate if the audio processor is available.
    * `volume_changed` - Current volume level. *Only sent if the Dolby connection is available.*
    * `mute_status_changed` - Current mute status. *Only sent if the Dolby connection is available.*
+   * `input_mode_changed` - Current active input mode. *Only sent if the Dolby connection is available.*
  * `lights_connection` - Indicate if the Jnior connection for light regulation is available.
 
 ## Message format
@@ -42,6 +43,12 @@ Sent when the sound was muted or unmuted.
  * `action` - string: `mute_status_changed`
  * `muted` - boolean: `true` if sound is muted, `false` otherwise.
 
+#### Input mode changed notification
+Sent when the audio input source changed.
+ * `msg_type` - string: `volume`
+ * `action` - string: `input_mode_changed`
+ * `mode` - int: `0-3`: Digital 1-4, `4`: Analog, `5`: NonSync.
+
 ### Integ Jnior 310
 #### Connection availability
 Sent when the jnior box for lights gets connected or disconnected.
@@ -75,10 +82,16 @@ This triggers a `mute_status_changed` notification on all connected clients when
  * `action` - string: `set_mute_status`
  * `muted` - boolean: `true` to mute the sound, `false` to unmute.
 
+#### Set audio input mode
+Set the audio input source to the specified mode.
+This triggers a `input_mode_changed` notification on all connected clients when the input mode was changed.
+ * `msg_type` - string: `volume`
+ * `action` - string: `set_input_mode`
+ * `mode` - int: `0-3`: Digital 1-4, `4`: Analog, `5`: NonSync.
+
 ### Integ Jnior 310
 #### Change light intensity
 Change the volume to the specified level.
-This triggers a `volume_changed` notification on all connected clients when the volume actually got changed.
  * `msg_type` - string: `lights`
  * `action` - string: `set_light_level`
  * `level` - int: The light intensity to choose as a value from 0-3. 0 = 0%, 1 = 33%, 2 = 66% and 3 = 100%.

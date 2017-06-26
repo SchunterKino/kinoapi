@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -15,6 +17,7 @@ import de.schunterkino.kinoapi.sockets.BaseSocketCommands;
 import de.schunterkino.kinoapi.sockets.CommandContainer;
 import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
+import de.schunterkino.kinoapi.websocket.messages.SetInputModeMessage;
 import de.schunterkino.kinoapi.websocket.messages.SetMuteStatusMessage;
 import de.schunterkino.kinoapi.websocket.messages.SetVolumeMessage;
 
@@ -35,6 +38,14 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 	private boolean muted;
 	private Instant lastGetMuteStatus;
 
+	// Input mode
+	// This list must match the InputMode enum.
+	private static final List<String> inputModeNames = Arrays.asList("dig_1", "dig_2", "dig_3", "dig_4", "analog",
+			"non_sync");
+	private Pattern inputModePattern;
+	private InputMode inputMode;
+	private Instant lastGetInputMode;
+
 	public DolbySocketCommands() {
 		super();
 		this.commandQueue = new LinkedList<>();
@@ -47,6 +58,10 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 		this.mutePattern = Pattern.compile("cp750\\.sys\\.mute (\\d+)");
 		this.muted = false;
 		this.lastGetMuteStatus = null;
+
+		this.inputModePattern = Pattern.compile("cp750\\.sys\\.input_mode ([a-zA-Z0-9_]+)");
+		this.inputMode = InputMode.Digital_1;
+		this.lastGetInputMode = null;
 	}
 
 	@Override
@@ -71,7 +86,7 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 						continue;
 
 					// Don't spam the commands that are sent every 5 seconds.
-					if (currentCommand.cmd != Commands.GetVolume && currentCommand.cmd != Commands.GetMuteStatus)
+					if (!ignoreCommandInOutput(currentCommand.cmd))
 						System.out
 								.println("Dolby: Current command: " + currentCommand.cmd + ". Received: " + ret.trim());
 
@@ -101,6 +116,19 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 							}
 						}
 						break;
+					case GetInputMode:
+						// Parse the response
+						matcher = inputModePattern.matcher(ret);
+						// Wait until we get the desired response.
+						while (matcher.find()) {
+							String inputMode = matcher.group(1);
+							if (inputMode != null) {
+								int ordInputMode = inputModeNames.indexOf(inputMode);
+								updateInputMode(InputMode.values()[ordInputMode]);
+								currentCommand = noneCommand;
+							}
+						}
+						break;
 					default:
 						currentCommand = noneCommand;
 						break;
@@ -125,6 +153,9 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 					else if (lastGetMuteStatus == null
 							|| Duration.between(lastGetMuteStatus, Instant.now()).toMillis() > 5000)
 						currentCommand = new CommandContainer<>(Commands.GetMuteStatus);
+					else if (lastGetInputMode == null
+							|| Duration.between(lastGetInputMode, Instant.now()).toMillis() > 5000)
+						currentCommand = new CommandContainer<>(Commands.GetInputMode);
 				}
 
 				// Send the right command now.
@@ -152,12 +183,19 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 				case SetMuteStatus:
 					command = "cp750.sys.mute " + currentCommand.value;
 					break;
+				case SetInputMode:
+					command = "cp750.sys.input_mode " + inputModeNames.get(currentCommand.value);
+					break;
+				case GetInputMode:
+					command = "cp750.sys.input_mode ?";
+					lastGetInputMode = Instant.now();
+					break;
 				}
 
 				if (command != null) {
 					socket.getOutputStream().write((command + "\r\n").getBytes(Charset.forName("ascii")));
 					// Don't spam the commands that are sent every 5 seconds.
-					if (currentCommand.cmd != Commands.GetVolume && currentCommand.cmd != Commands.GetMuteStatus)
+					if (!ignoreCommandInOutput(currentCommand.cmd))
 						System.out.println("Dolby: Sent: " + command);
 				}
 
@@ -188,11 +226,9 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 	}
 
 	public void decreaseVolume() {
-		synchronized (commandQueue) {
-			addCommand(Commands.DecreaseVolume);
-			// Get the new volume right away afterwards.
-			addCommand(Commands.GetVolume);
-		}
+		addCommand(Commands.DecreaseVolume);
+		// Get the new volume right away afterwards.
+		addCommand(Commands.GetVolume);
 	}
 
 	public int getVolume() {
@@ -200,11 +236,9 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 	}
 
 	public void setVolume(int volume) {
-		synchronized (commandQueue) {
-			addCommand(Commands.SetVolume, volume);
-			// Get the new volume right away afterwards.
-			addCommand(Commands.GetVolume);
-		}
+		addCommand(Commands.SetVolume, volume);
+		// Get the new volume right away afterwards.
+		addCommand(Commands.GetVolume);
 	}
 
 	public boolean isMuted() {
@@ -212,11 +246,19 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 	}
 
 	public void setMuted(boolean muted) {
-		synchronized (commandQueue) {
-			addCommand(Commands.SetMuteStatus, muted ? 1 : 0);
-			// Get the new status right away afterwards.
-			addCommand(Commands.GetMuteStatus);
-		}
+		addCommand(Commands.SetMuteStatus, muted ? 1 : 0);
+		// Get the new status right away afterwards.
+		addCommand(Commands.GetMuteStatus);
+	}
+
+	public InputMode getInputMode() {
+		return inputMode;
+	}
+
+	public void setInputMode(InputMode mode) {
+		addCommand(Commands.SetInputMode, mode.ordinal());
+		// Get the new mode right away afterwards.
+		addCommand(Commands.GetInputMode);
 	}
 
 	private void addCommand(Commands cmd, int value) {
@@ -236,6 +278,10 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 
 	private void addCommand(Commands cmd) {
 		addCommand(cmd, 0);
+	}
+
+	private boolean ignoreCommandInOutput(Commands cmd) {
+		return cmd == Commands.GetVolume || cmd == Commands.GetMuteStatus || cmd == Commands.GetInputMode;
 	}
 
 	private void updateVolumeValue(int volume) {
@@ -264,6 +310,21 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 		synchronized (listeners) {
 			for (IDolbyStatusUpdateReceiver listener : listeners) {
 				listener.onMuteStatusChanged(muted);
+			}
+		}
+	}
+
+	private void updateInputMode(InputMode mode) {
+		// Don't inform if the status didn't change.
+		if (this.inputMode == mode)
+			return;
+
+		this.inputMode = mode;
+
+		// Notify listeners.
+		synchronized (listeners) {
+			for (IDolbyStatusUpdateReceiver listener : listeners) {
+				listener.onInputModeChanged(mode);
 			}
 		}
 	}
@@ -309,6 +370,21 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 			else
 				throw new WebSocketCommandException(
 						"Failed to change mute state. No connection to Dolby audio processor.");
+
+			return true;
+
+		case "set_input_mode":
+			SetInputModeMessage setInputModeMsg = gson.fromJson(message, SetInputModeMessage.class);
+			if (socket.isConnected()) {
+				int desiredMode = setInputModeMsg.getInputMode();
+				if (desiredMode < 0 || desiredMode >= InputMode.values().length)
+					throw new WebSocketCommandException("Invalid input mode " + desiredMode
+							+ ". Has to be between 0 and " + InputMode.values().length + ".");
+				InputMode mode = InputMode.values()[desiredMode];
+				setInputMode(mode);
+			} else
+				throw new WebSocketCommandException(
+						"Failed to change input mode. No connection to Dolby audio processor.");
 
 			return true;
 		}
