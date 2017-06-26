@@ -91,7 +91,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 	@Override
 	public void onOpen(WebSocket conn, ClientHandshake handshake) {
-		System.out.println("WebSocket: " + conn.getRemoteSocketAddress().getAddress().getHostAddress() + " connected!");
+		System.out.println("WebSocket: " + prettySocket(conn) + " connected!");
 
 		// Inform the new client of the current status.
 
@@ -111,7 +111,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 	@Override
 	public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-		System.out.println("WebSocket: " + conn + " disconnected!");
+		System.out.println("WebSocket: " + prettySocket(conn) + " disconnected!");
 	}
 
 	@Override
@@ -119,7 +119,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 		if (conn != null) {
 			// some errors like port binding failed may not be assignable to a
 			// specific websocket
-			System.err.println("WebSocket: ChildSocket " + conn + " error: " + ex.getMessage());
+			System.err.println("WebSocket: ChildSocket " + prettySocket(conn) + " error: " + ex.getMessage());
 		} else {
 			// TODO: Stop the application or try to start the server again in a
 			// bit.
@@ -129,7 +129,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 	@Override
 	public void onMessage(WebSocket conn, String message) {
-		System.out.println("WebSocket: " + conn + ": " + message);
+		System.out.println("WebSocket: " + prettySocket(conn) + ": " + message);
 
 		try {
 			// Try to parse this message as JSON and try to extract the message
@@ -193,6 +193,11 @@ public class CinemaWebSocketServer extends WebSocketServer
 				c.send(text);
 			}
 		}
+	}
+
+	private static String prettySocket(WebSocket conn) {
+		return conn.getRemoteSocketAddress().getAddress().getHostAddress() + ":"
+				+ conn.getRemoteSocketAddress().getPort();
 	}
 
 	@Override
