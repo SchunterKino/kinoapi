@@ -23,7 +23,7 @@ import de.schunterkino.kinoapi.websocket.messages.volume.SetVolumeMessage;
 
 public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateReceiver> {
 
-	private static int UPDATE_INTERVAL = 1000;
+	private static int UPDATE_INTERVAL = 2000;
 	private static CommandContainer<Commands> noneCommand = new CommandContainer<>(Commands.None);
 
 	private LinkedList<CommandContainer<Commands>> commandQueue;
