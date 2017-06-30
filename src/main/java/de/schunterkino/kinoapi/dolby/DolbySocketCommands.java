@@ -17,6 +17,7 @@ import de.schunterkino.kinoapi.sockets.BaseSocketCommands;
 import de.schunterkino.kinoapi.sockets.CommandContainer;
 import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
+import de.schunterkino.kinoapi.websocket.messages.volume.SetDecodeModeMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.SetInputModeMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.SetMuteStatusMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.SetVolumeMessage;
@@ -47,6 +48,13 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 	private InputMode inputMode;
 	private Instant lastGetInputMode;
 
+	// Digital 1 decode mode (5.1 or 7.1 surround)
+	private static final List<String> decodeModeNames = Arrays.asList("invalid", "auto", "n_a", "lr_discrete",
+			"prologic", "prologic_2", "4_discrete_sur");
+	private Pattern decodeModePattern;
+	private DecodeMode decodeMode;
+	private Instant lastGetDecodeMode;
+
 	public DolbySocketCommands() {
 		super();
 		this.commandQueue = new LinkedList<>();
@@ -63,6 +71,10 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 		this.inputModePattern = Pattern.compile("cp750\\.sys\\.input_mode ([a-zA-Z0-9_]+)");
 		this.inputMode = InputMode.Digital_1;
 		this.lastGetInputMode = null;
+
+		this.decodeModePattern = Pattern.compile("cp750\\.sys\\.pcm_2_channel_decode_mode_1 ([a-zA-Z0-9_]+)");
+		this.decodeMode = DecodeMode.Auto;
+		this.lastGetDecodeMode = null;
 	}
 
 	@Override
@@ -130,9 +142,27 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 								int ordInputMode = inputModeNames.indexOf(inputMode);
 								if (ordInputMode != -1) {
 									updateInputMode(InputMode.values()[ordInputMode]);
-								}
-								else {
+								} else {
 									System.err.printf("Dolby: Received invalid input_mode: %s%n", inputMode);
+								}
+								currentCommand = noneCommand;
+							}
+						}
+						break;
+					case GetDecodeMode:
+					case SetDecodeMode:
+						// Parse the response
+						matcher = decodeModePattern.matcher(ret);
+						// Wait until we get the desired response.
+						while (matcher.find()) {
+							String decodeMode = matcher.group(1);
+							if (decodeMode != null) {
+								int ordDecodeMode = decodeModeNames.indexOf(decodeMode);
+								if (ordDecodeMode != -1) {
+									updateDecodeMode(DecodeMode.values()[ordDecodeMode]);
+								} else {
+									System.err.printf("Dolby: Received invalid pcm_2_channel_decode_mode_1: %s%n",
+											decodeMode);
 								}
 								currentCommand = noneCommand;
 							}
@@ -157,7 +187,8 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 					// Get the current volume every UPDATE_INTERVAL seconds.
 					// TODO: Increase the interval if no websocket clients are
 					// connected.
-					if (lastGetVolume == null || Duration.between(lastGetVolume, Instant.now()).toMillis() > UPDATE_INTERVAL)
+					if (lastGetVolume == null
+							|| Duration.between(lastGetVolume, Instant.now()).toMillis() > UPDATE_INTERVAL)
 						currentCommand = new CommandContainer<>(Commands.GetVolume);
 					else if (lastGetMuteStatus == null
 							|| Duration.between(lastGetMuteStatus, Instant.now()).toMillis() > UPDATE_INTERVAL)
@@ -165,6 +196,9 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 					else if (lastGetInputMode == null
 							|| Duration.between(lastGetInputMode, Instant.now()).toMillis() > UPDATE_INTERVAL)
 						currentCommand = new CommandContainer<>(Commands.GetInputMode);
+					else if (lastGetDecodeMode == null
+							|| Duration.between(lastGetDecodeMode, Instant.now()).toMillis() > UPDATE_INTERVAL)
+						currentCommand = new CommandContainer<>(Commands.GetDecodeMode);
 				}
 
 				// Send the right command now.
@@ -198,6 +232,13 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 				case GetInputMode:
 					command = "cp750.sys.input_mode ?";
 					lastGetInputMode = Instant.now();
+					break;
+				case SetDecodeMode:
+					command = "cp750.sys.pcm_2_channel_decode_mode_1 " + decodeModeNames.get(currentCommand.value);
+					break;
+				case GetDecodeMode:
+					command = "cp750.sys.pcm_2_channel_decode_mode_1 ?";
+					lastGetDecodeMode = Instant.now();
 					break;
 				}
 
@@ -264,6 +305,14 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 		addCommand(Commands.SetInputMode, mode.ordinal());
 	}
 
+	public DecodeMode getDecodeMode() {
+		return decodeMode;
+	}
+
+	public void setDecodeMode(DecodeMode mode) {
+		addCommand(Commands.SetDecodeMode, mode.ordinal());
+	}
+
 	private void addCommand(Commands cmd, int value) {
 		synchronized (commandQueue) {
 			// Make sure this is the only command of that type in the queue.
@@ -284,7 +333,8 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 	}
 
 	private boolean ignoreCommandInOutput(Commands cmd) {
-		return cmd == Commands.GetVolume || cmd == Commands.GetMuteStatus || cmd == Commands.GetInputMode;
+		return cmd == Commands.GetVolume || cmd == Commands.GetMuteStatus || cmd == Commands.GetInputMode
+				|| cmd == Commands.GetDecodeMode;
 	}
 
 	private void updateVolumeValue(int volume) {
@@ -328,6 +378,21 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 		synchronized (listeners) {
 			for (IDolbyStatusUpdateReceiver listener : listeners) {
 				listener.onInputModeChanged(mode);
+			}
+		}
+	}
+
+	private void updateDecodeMode(DecodeMode mode) {
+		// Don't inform if the status didn't change.
+		if (this.decodeMode == mode)
+			return;
+
+		this.decodeMode = mode;
+
+		// Notify listeners.
+		synchronized (listeners) {
+			for (IDolbyStatusUpdateReceiver listener : listeners) {
+				listener.onDecodeModeChanged(mode);
 			}
 		}
 	}
@@ -388,6 +453,21 @@ public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateRe
 			} else
 				throw new WebSocketCommandException(
 						"Failed to change input mode. No connection to Dolby audio processor.");
+
+			return true;
+
+		case "set_decode_mode":
+			SetDecodeModeMessage setDecodeModeMsg = gson.fromJson(message, SetDecodeModeMessage.class);
+			if (socket.isConnected()) {
+				int desiredMode = setDecodeModeMsg.getDecodeMode();
+				if (desiredMode < 0 || desiredMode >= DecodeMode.values().length)
+					throw new WebSocketCommandException("Invalid decode mode " + desiredMode
+							+ ". Has to be between 0 and " + DecodeMode.values().length + ".");
+				DecodeMode mode = DecodeMode.values()[desiredMode];
+				setDecodeMode(mode);
+			} else
+				throw new WebSocketCommandException(
+						"Failed to change decode mode. No connection to Dolby audio processor.");
 
 			return true;
 		}

@@ -13,6 +13,7 @@ import com.google.gson.JsonSyntaxException;
 
 import de.schunterkino.kinoapi.christie.ChristieSocketCommands;
 import de.schunterkino.kinoapi.christie.IChristieStatusUpdateReceiver;
+import de.schunterkino.kinoapi.dolby.DecodeMode;
 import de.schunterkino.kinoapi.dolby.DolbySocketCommands;
 import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
 import de.schunterkino.kinoapi.dolby.InputMode;
@@ -23,6 +24,7 @@ import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.ChristieConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.jnior.LightsConnectionMessage;
+import de.schunterkino.kinoapi.websocket.messages.volume.DecodeModeChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.DolbyConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.InputModeChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.MuteStatusChangedMessage;
@@ -117,6 +119,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 			conn.send(gson.toJson(new VolumeChangedMessage(dolby.getCommands().getVolume())));
 			conn.send(gson.toJson(new MuteStatusChangedMessage(dolby.getCommands().isMuted())));
 			conn.send(gson.toJson(new InputModeChangedMessage(dolby.getCommands().getInputMode())));
+			conn.send(gson.toJson(new DecodeModeChangedMessage(dolby.getCommands().getDecodeMode())));
 		}
 
 		// Also tell the client if we have a connection to the Jnior box.
@@ -256,6 +259,12 @@ public class CinemaWebSocketServer extends WebSocketServer
 	@Override
 	public void onInputModeChanged(InputMode mode) {
 		InputModeChangedMessage msg = new InputModeChangedMessage(mode);
+		sendToAll(gson.toJson(msg));
+	}
+
+	@Override
+	public void onDecodeModeChanged(DecodeMode mode) {
+		DecodeModeChangedMessage msg = new DecodeModeChangedMessage(mode);
 		sendToAll(gson.toJson(msg));
 	}
 

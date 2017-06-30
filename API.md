@@ -6,6 +6,7 @@ When a websocket connection to the server on port 8641 is opened the server send
    * `volume_changed` - Current volume level. *Only sent if the Dolby connection is available.*
    * `mute_status_changed` - Current mute status. *Only sent if the Dolby connection is available.*
    * `input_mode_changed` - Current active input mode. *Only sent if the Dolby connection is available.*
+   * `decode_mode_changed` - Current active decode mode for Digital 1 input. *Only sent if the Dolby connection is available.*
  * `lights_connection` - Indicate if the Jnior connection for light regulation is available.
  * `projector_connection` - Indicate if the Christie IMB connection for projector control is available.
 
@@ -49,6 +50,13 @@ Sent when the audio input source changed.
  * `msg_type` - string: `volume`
  * `action` - string: `input_mode_changed`
  * `mode` - int: `0-3`: Digital 1-4, `4`: Analog, `5`: NonSync, `6`: Microphone, `7`: Last setting on power off.
+
+#### Decode mode changed notification
+Sent when the decode mode of the `Digital 1` input changed.
+This is used to differentiate between 5.1 and 7.1 surround sound sources.
+ * `msg_type` - string: `volume`
+ * `action` - string: `decode_mode_changed`
+ * `mode` - int: `0`: Auto, `1`: Invalid, `2`: N_A, `3`: 5.1 Surround, `4`: Dolby Pro Logic, `5`: Dolby Pro Logic 2, `6`: 7.1 Surround.
 
 ### Integ Jnior 310
 #### Connection availability
@@ -96,6 +104,14 @@ This triggers a `input_mode_changed` notification on all connected clients when 
  * `msg_type` - string: `volume`
  * `action` - string: `set_input_mode`
  * `mode` - int: `0-3`: Digital 1-4, `4`: Analog, `5`: NonSync, `6`: Microphone, `7`: Last setting on power off.
+
+#### Set audio decode mode
+Set the decode mode of the `Digital 1` input.
+This triggers a `decode_mode_changed` notification on all connected clients when the input mode was changed.
+This is used to differentiate between 5.1 and 7.1 surround sound sources.
+ * `msg_type` - string: `volume`
+ * `action` - string: `set_decode_mode`
+ * `mode` - int: `0`: Auto, `1`: Invalid, `2`: N_A, `3`: 5.1 Surround, `4`: Pro Logic, `5`: Pro Logic II, `6`: 7.1 Surround.
 
 ### Integ Jnior 310
 #### Change light intensity

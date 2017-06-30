@@ -10,4 +10,6 @@ public interface IDolbyStatusUpdateReceiver {
 	void onMuteStatusChanged(boolean muted);
 
 	void onInputModeChanged(InputMode mode);
+
+	void onDecodeModeChanged(DecodeMode mode);
 }
