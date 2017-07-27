@@ -15,6 +15,9 @@ public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implemen
 	private Socket socket;
 	private T commands;
 	private boolean stop;
+	
+	// Wait X seconds after a connection problem until trying again.
+	private static int RECONNECT_TIME = 10;
 
 	public BaseSocketClient(String ip, int port, String log_tag, Class<T> typeArgumentClass) {
 		this.ip = ip;
@@ -57,7 +60,7 @@ public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implemen
 					// started.
 					if (!stop)
 						System.err.printf(
-								"%s: Error in connection. Reconnecting in 30 seconds. Exception: %s%n", log_tag, e.getMessage());
+								"%s: Error in connection. Reconnecting in %d seconds. Exception: %s%n", log_tag, RECONNECT_TIME, e.getMessage());
 				}
 			} catch (InterruptedException e) {
 				System.err.printf("%s: Error while waiting for reader thread: %s%n", log_tag, e.getMessage());
@@ -78,7 +81,7 @@ public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implemen
 
 			// Wait 30 seconds until we try to connect again.
 			try {
-				Thread.sleep(30000);
+				Thread.sleep(RECONNECT_TIME*1000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
