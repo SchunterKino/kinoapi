@@ -69,7 +69,7 @@ public class SchunterServerSocket implements Runnable {
 				if (input != null) {
 					System.out.println("ServerSocket: Received " + input);
 
-					if ("LampIsOffYo".equals(input)) {
+					if (input.trim().startsWith("LampIsOffYo")) {
 						lampOffTime = Instant.now();
 						synchronized (listeners) {
 							for (IServerSocketStatusUpdateReceiver listener : listeners) {
