@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import de.schunterkino.kinoapi.audio.AudioPlayer;
 import de.schunterkino.kinoapi.christie.ChristieCommand;
 import de.schunterkino.kinoapi.christie.ChristieSocketCommands;
 import de.schunterkino.kinoapi.christie.IChristieStatusUpdateReceiver;
@@ -27,7 +28,7 @@ public class App {
 	private final static String JNIOR_IP = "10.100.152.12";
 	private final static int JNIOR_PORT = 9202;
 	private final static int LISTEN_PORT = 52471;
-	
+
 	public static void main(String[] args) {
 
 		// Setup the Dolby CP750 connection.
@@ -51,7 +52,11 @@ public class App {
 		SchunterServerSocket serverSocket = new SchunterServerSocket(LISTEN_PORT);
 		Thread serverThread = new Thread(serverSocket);
 		serverThread.start();
-		
+
+		// Create an audio player to play some nice tunes when the lamp is
+		// cooled off.
+		new AudioPlayer(dolbyConnection, serverSocket);
+
 		// Start the websocket server now.
 		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer(WEBSOCKET_PORT, dolbyConnection,
 				jniorConnection, christieConnection, serverSocket);
@@ -115,7 +120,7 @@ public class App {
 				// We want to stop anyways. Errors are ok.
 			}
 			System.out.println("Christie: Client stopped.");
-			
+
 			try {
 				if (!serverSocket.isRunning())
 					serverThread.interrupt();

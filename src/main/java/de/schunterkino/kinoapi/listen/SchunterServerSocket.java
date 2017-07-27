@@ -35,6 +35,7 @@ public class SchunterServerSocket implements Runnable {
 		// Keep trying to create a socket server.
 		while (!stop) {
 			try {
+				// TODO: Listen only on the ethernet interface.
 				server = new ServerSocket(port);
 				System.out.printf("ServerSocket: Listening on port %d%n", port);
 
