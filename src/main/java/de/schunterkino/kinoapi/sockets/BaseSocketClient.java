@@ -19,10 +19,10 @@ public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implemen
 	// Wait X seconds after a connection problem until trying again.
 	private static int RECONNECT_TIME = 10;
 
-	public BaseSocketClient(String ip, int port, String log_tag, Class<T> typeArgumentClass) {
+	public BaseSocketClient(String ip, int port, Class<T> typeArgumentClass) {
 		this.ip = ip;
 		this.port = port;
-		this.log_tag = log_tag;
+		this.log_tag = typeArgumentClass.getSimpleName();
 		this.socket = null;
 		try {
 			this.socketAddress = new InetSocketAddress(InetAddress.getByName(ip), port);

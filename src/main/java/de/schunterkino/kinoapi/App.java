@@ -30,19 +30,19 @@ public class App {
 
 		// Setup the Dolby CP750 connection.
 		BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolbyConnection = new BaseSocketClient<>(
-				DOLBY_IP, DOLBY_PORT, "Dolby", DolbySocketCommands.class);
+				DOLBY_IP, DOLBY_PORT, DolbySocketCommands.class);
 		Thread dolbyThread = new Thread(dolbyConnection);
 		dolbyThread.start();
 
 		// Setup the Integ Jnior 310 connection.
 		BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver, JniorCommand> jniorConnection = new BaseSocketClient<>(
-				JNIOR_IP, JNIOR_PORT, "Jnior", JniorSocketCommands.class);
+				JNIOR_IP, JNIOR_PORT, JniorSocketCommands.class);
 		Thread jniorThread = new Thread(jniorConnection);
 		jniorThread.start();
 
 		// Setup the Christie Projection connection.
 		BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver, ChristieCommand> christieConnection = new BaseSocketClient<>(
-				CHRISTIE_IMB_IP, CHRISTIE_IMB_PORT, "Christie", ChristieSocketCommands.class);
+				CHRISTIE_IMB_IP, CHRISTIE_IMB_PORT, ChristieSocketCommands.class);
 		Thread christieThread = new Thread(christieConnection);
 		christieThread.start();
 
