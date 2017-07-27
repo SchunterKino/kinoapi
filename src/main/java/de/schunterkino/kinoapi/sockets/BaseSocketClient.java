@@ -83,7 +83,8 @@ public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implemen
 			try {
 				Thread.sleep(RECONNECT_TIME*1000);
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+				if (!stop)
+					e.printStackTrace();
 			}
 		}
 	}

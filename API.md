@@ -9,6 +9,7 @@ When a websocket connection to the server on port 8641 is opened the server send
    * `decode_mode_changed` - Current active decode mode for Digital 1 input. *Only sent if the Dolby connection is available.*
  * `lights_connection` - Indicate if the Jnior connection for light regulation is available.
  * `projector_connection` - Indicate if the Christie IMB connection for projector control is available.
+   * `lamp_off` - Inform if the lamp was recently turned off. Not sent anymore after 2 hours. *Only sent if the Christie connection is available.*
 
 ## Message format
 Every message is encoded as a JSON object containing at least a `msg_type` and an `action` string attribute.
@@ -71,6 +72,12 @@ Sent when the Christie Projector for playback control gets connected or disconne
  * `msg_type` - string: `playback`
  * `action` - string: `projector_connection`
  * `connected` - boolean: `true` if connection to Christie IMB-S2 is available, `false` otherwise.
+
+#### Lamp finished cooling
+Sent when the lamp of the projector finished cooling and turned off.
+ * `msg_type` - string: `playback`
+ * `action` - string: `lamp_off`
+ * `timestamp` - string: ISO 8601 formated point in time of when the lamp was turned off.
 
 ## Client -> Server
 ### Dolby CP750 Audio

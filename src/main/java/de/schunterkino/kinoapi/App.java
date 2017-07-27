@@ -13,6 +13,7 @@ import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.JniorCommand;
 import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
+import de.schunterkino.kinoapi.listen.SchunterServerSocket;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.CinemaWebSocketServer;
 
@@ -25,7 +26,8 @@ public class App {
 	private final static int CHRISTIE_IMB_PORT = 5111;
 	private final static String JNIOR_IP = "10.100.152.12";
 	private final static int JNIOR_PORT = 9202;
-
+	private final static int LISTEN_PORT = 52471;
+	
 	public static void main(String[] args) {
 
 		// Setup the Dolby CP750 connection.
@@ -46,9 +48,13 @@ public class App {
 		Thread christieThread = new Thread(christieConnection);
 		christieThread.start();
 
+		SchunterServerSocket serverSocket = new SchunterServerSocket(LISTEN_PORT);
+		Thread serverThread = new Thread(serverSocket);
+		serverThread.start();
+		
 		// Start the websocket server now.
 		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer(WEBSOCKET_PORT, dolbyConnection,
-				jniorConnection, christieConnection);
+				jniorConnection, christieConnection, serverSocket);
 		websocketServer.start();
 		System.out.println("WebSocket: Server created on port: " + websocketServer.getPort());
 
@@ -72,6 +78,7 @@ public class App {
 			dolbyConnection.stopServer();
 			jniorConnection.stopServer();
 			christieConnection.stopServer();
+			serverSocket.stopServer();
 
 			// Shutdown the servers.
 			try {
@@ -108,6 +115,15 @@ public class App {
 				// We want to stop anyways. Errors are ok.
 			}
 			System.out.println("Christie: Client stopped.");
+			
+			try {
+				if (!serverSocket.isRunning())
+					serverThread.interrupt();
+				serverThread.join();
+			} catch (InterruptedException e) {
+				// We want to stop anyways. Errors are ok.
+			}
+			System.out.println("ServerSocket: Server stopped.");
 		}
 	}
 }

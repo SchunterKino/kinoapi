@@ -1,6 +1,8 @@
 package de.schunterkino.kinoapi.websocket;
 
 import java.net.InetSocketAddress;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedList;
 
@@ -22,10 +24,13 @@ import de.schunterkino.kinoapi.dolby.InputMode;
 import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.JniorCommand;
 import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
+import de.schunterkino.kinoapi.listen.IServerSocketStatusUpdateReceiver;
+import de.schunterkino.kinoapi.listen.SchunterServerSocket;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.ChristieConnectionMessage;
+import de.schunterkino.kinoapi.websocket.messages.christie.LampOffMessage;
 import de.schunterkino.kinoapi.websocket.messages.jnior.LightsConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.DecodeModeChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.DolbyConnectionMessage;
@@ -41,8 +46,8 @@ import de.schunterkino.kinoapi.websocket.messages.volume.VolumeChangedMessage;
  * 
  * @see API.md
  */
-public class CinemaWebSocketServer extends WebSocketServer
-		implements IDolbyStatusUpdateReceiver, IJniorStatusUpdateReceiver, IChristieStatusUpdateReceiver {
+public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStatusUpdateReceiver,
+		IJniorStatusUpdateReceiver, IChristieStatusUpdateReceiver, IServerSocketStatusUpdateReceiver {
 
 	/**
 	 * Google JSON instance to convert Java objects into JSON objects.
@@ -67,6 +72,12 @@ public class CinemaWebSocketServer extends WebSocketServer
 	private BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver, ChristieCommand> christie;
 
 	/**
+	 * Server socket which is used to listen to the event of the projector lamp
+	 * being off.
+	 */
+	private SchunterServerSocket server;
+
+	/**
 	 * List of JSON protocol incoming command handlers. Incoming messages on the
 	 * WebSockets are passed to the handlers until one claims responsibility for
 	 * the packet.
@@ -83,9 +94,11 @@ public class CinemaWebSocketServer extends WebSocketServer
 	 * @param jnior
 	 *            Instance of Jnior socket client.
 	 */
-	public CinemaWebSocketServer(int port, BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolby,
+	public CinemaWebSocketServer(int port,
+			BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolby,
 			BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver, JniorCommand> jnior,
-			BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver, ChristieCommand> christie) {
+			BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver, ChristieCommand> christie,
+			SchunterServerSocket server) {
 		super(new InetSocketAddress(port));
 
 		this.gson = new Gson();
@@ -106,6 +119,9 @@ public class CinemaWebSocketServer extends WebSocketServer
 		// Start listening for Christie IMB events like connection updates.
 		christie.getCommands().registerListener(this);
 		messageHandlers.add(christie.getCommands());
+
+		this.server = server;
+		server.registerListener(this);
 	}
 
 	@Override
@@ -130,6 +146,12 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 		// And if the projector is up.
 		conn.send(gson.toJson(new ChristieConnectionMessage(christie.isConnected())));
+		if (christie.isConnected()) {
+			Instant lampOffTime = server.getLampOffTime();
+			// Only send the lamp off time if it's been max. 2 hours ago.
+			if (lampOffTime != null && Duration.between(lampOffTime, Instant.now()).toHours() < 2)
+				conn.send(gson.toJson(new LampOffMessage(lampOffTime)));
+		}
 	}
 
 	@Override
@@ -280,6 +302,12 @@ public class CinemaWebSocketServer extends WebSocketServer
 	@Override
 	public void onChristieDisconnected() {
 		ChristieConnectionMessage msg = new ChristieConnectionMessage(false);
+		sendToAll(gson.toJson(msg));
+	}
+
+	@Override
+	public void onLampTurnedOff(Instant lampOffTime) {
+		LampOffMessage msg = new LampOffMessage(lampOffTime);
 		sendToAll(gson.toJson(msg));
 	}
 }
