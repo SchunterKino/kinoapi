@@ -18,23 +18,23 @@ import de.schunterkino.kinoapi.websocket.IWebSocketMessageHandler;
 public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMessageHandler {
 
 	protected String LOG_TAG = this.getClass().getSimpleName();
-	
+
 	protected int UPDATE_INTERVAL = 2000;
-	
+
 	protected Socket socket;
 	protected boolean stop;
 	protected LinkedList<T> listeners;
 	protected Gson gson;
-	
+
 	private LinkedList<CommandContainer<V>> commandQueue;
-	private CommandContainer<V> currentCommand;
 	private CommandContainer<V> noneCommand = new CommandContainer<>(null);
-	
+	private CommandContainer<V> currentCommand = noneCommand;
+
 	// A map to remember when we last sent a command.
 	// The command is added to the queue again if the last time is longer than
 	// UPDATE_INTERVAL ago.
 	private HashMap<V, Instant> updateCommands;
-	
+
 	// Maybe we're not interested at all in what the server has to say.
 	// Don't wait for responses.
 	private boolean ignoreResponses;
@@ -46,6 +46,7 @@ public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMe
 		this.gson = new Gson();
 		this.commandQueue = new LinkedList<>();
 		this.updateCommands = new HashMap<>();
+
 		this.ignoreResponses = false;
 	}
 
@@ -62,11 +63,11 @@ public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMe
 			listeners.add(listener);
 		}
 	}
-	
+
 	@Override
 	public void run() {
 		onSocketConnected();
-		
+
 		// Go in a loop to process the data on the socket.
 		try {
 			do {
@@ -81,8 +82,8 @@ public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMe
 					// Don't spam the commands that are sent every
 					// UPDATE_INTERVAL seconds.
 					if (!isRepeatingCommand(currentCommand.cmd))
-						System.out
-								.printf("%s: Current command: %s. Received: %s%n", LOG_TAG, currentCommand.cmd.toString(), ret.trim());
+						System.out.printf("%s: Current command: %s. Received: %s%n", LOG_TAG,
+								currentCommand.cmd.toString(), ret.trim());
 
 					// The command wasn't handled yet.
 					if (!onReceiveCommandOutput(ret))
@@ -113,7 +114,9 @@ public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMe
 				}
 
 				// Send the right command now.
-				String command = getCommandString(currentCommand);
+				String command = null;
+				if (currentCommand.cmd != null)
+					command = getCommandString(currentCommand);
 
 				// Update the timestamp of when we last executed this command if
 				// it's one of the repeating ones.
@@ -138,19 +141,22 @@ public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMe
 				e.printStackTrace();
 			}
 		}
-		
+
 		onSocketDisconnected();
 	}
-	
+
 	protected abstract void onSocketConnected();
+
 	protected abstract void onSocketDisconnected();
+
 	protected abstract boolean onReceiveCommandOutput(String input);
+
 	protected abstract String getCommandString(CommandContainer<V> cmd);
-	
+
 	private boolean isRepeatingCommand(V cmd) {
 		return updateCommands.containsKey(cmd);
 	}
-	
+
 	protected String read() throws IOException {
 		InputStream in = socket.getInputStream();
 		byte[] buffer = new byte[1024];
@@ -164,11 +170,11 @@ public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMe
 
 		return new String(buffer, 0, ret_read);
 	}
-	
+
 	protected CommandContainer<V> getCurrentCommand() {
 		return currentCommand;
 	}
-	
+
 	protected void addCommand(V cmd, int value) {
 		synchronized (commandQueue) {
 			// Make sure this is the only command of that type in the queue.
@@ -183,15 +189,15 @@ public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMe
 			commandQueue.add(new CommandContainer<>(cmd, value));
 		}
 	}
-	
+
 	protected void addCommand(V cmd) {
 		addCommand(cmd, 0);
 	}
-	
+
 	protected void watchCommand(V cmd) {
 		updateCommands.put(cmd, null);
 	}
-	
+
 	protected void ignoreResponses() {
 		ignoreResponses = true;
 	}
