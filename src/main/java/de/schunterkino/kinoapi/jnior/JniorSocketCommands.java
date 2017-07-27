@@ -11,12 +11,14 @@ import de.schunterkino.kinoapi.websocket.messages.jnior.SetLightLevelMessage;
 public class JniorSocketCommands extends BaseSocketCommands<IJniorStatusUpdateReceiver, JniorCommand> {
 
 	protected int UPDATE_INTERVAL = 10000;
-	
+
 	public JniorSocketCommands() {
 		super();
 		ignoreResponses();
+		
+		watchCommand(JniorCommand.KeepAlive);
 	}
-	
+
 	@Override
 	protected void onSocketConnected() {
 		// Notify listeners.
@@ -63,11 +65,12 @@ public class JniorSocketCommands extends BaseSocketCommands<IJniorStatusUpdateRe
 				break;
 			}
 			break;
+		case KeepAlive:
+			command = "nope";
+			break;
 		}
 		return command;
 	}
-
-	
 
 	public void setLightLevel(int level) {
 		addCommand(JniorCommand.SetLightLevel, level);

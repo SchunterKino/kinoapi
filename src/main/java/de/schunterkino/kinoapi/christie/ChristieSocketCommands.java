@@ -9,14 +9,19 @@ import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.SetInputModeMessage;
 
 public class ChristieSocketCommands extends BaseSocketCommands<IChristieStatusUpdateReceiver, ChristieCommand> {
-	
+
 	protected int UPDATE_INTERVAL = 10000;
 
 	public ChristieSocketCommands() {
 		super();
 		ignoreResponses();
+
+		// Send some random string every now and then to keep the projector from
+		// closing our connection.
+		// And detect if the projector is turned off.
+		watchCommand(ChristieCommand.KeepAlive);
 	}
-	
+
 	@Override
 	protected void onSocketConnected() {
 		// Notify listeners.
@@ -78,6 +83,9 @@ public class ChristieSocketCommands extends BaseSocketCommands<IChristieStatusUp
 			break;
 		case FormatPCScope:
 			command = "ComputerScope";
+			break;
+		case KeepAlive:
+			command = "PenisKopf";
 			break;
 		}
 		return command;
