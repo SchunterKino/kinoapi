@@ -25,7 +25,6 @@ public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implemen
 			this.socketAddress = new InetSocketAddress(InetAddress.getByName(ip), port);
 			this.commands = typeArgumentClass.newInstance();
 		} catch (InstantiationException | IllegalAccessException | UnknownHostException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		this.stop = false;
@@ -66,7 +65,7 @@ public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implemen
 
 			// Properly shutdown the client connection.
 			try {
-				if (socket != null) {
+				if (isConnected()) {
 					socket.close();
 					System.out.printf("%s: Connection closed.%n", log_tag);
 				}
@@ -81,7 +80,6 @@ public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implemen
 			try {
 				Thread.sleep(30000);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
