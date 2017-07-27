@@ -4,11 +4,14 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import de.schunterkino.kinoapi.christie.ChristieCommand;
 import de.schunterkino.kinoapi.christie.ChristieSocketCommands;
 import de.schunterkino.kinoapi.christie.IChristieStatusUpdateReceiver;
+import de.schunterkino.kinoapi.dolby.DolbyCommand;
 import de.schunterkino.kinoapi.dolby.DolbySocketCommands;
 import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
+import de.schunterkino.kinoapi.jnior.JniorCommand;
 import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.CinemaWebSocketServer;
@@ -26,19 +29,19 @@ public class App {
 	public static void main(String[] args) {
 
 		// Setup the Dolby CP750 connection.
-		BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolbyConnection = new BaseSocketClient<>(
+		BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolbyConnection = new BaseSocketClient<>(
 				DOLBY_IP, DOLBY_PORT, "Dolby", DolbySocketCommands.class);
 		Thread dolbyThread = new Thread(dolbyConnection);
 		dolbyThread.start();
 
 		// Setup the Integ Jnior 310 connection.
-		BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver> jniorConnection = new BaseSocketClient<>(
+		BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver, JniorCommand> jniorConnection = new BaseSocketClient<>(
 				JNIOR_IP, JNIOR_PORT, "Jnior", JniorSocketCommands.class);
 		Thread jniorThread = new Thread(jniorConnection);
 		jniorThread.start();
 
 		// Setup the Christie Projection connection.
-		BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver> christieConnection = new BaseSocketClient<>(
+		BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver, ChristieCommand> christieConnection = new BaseSocketClient<>(
 				CHRISTIE_IMB_IP, CHRISTIE_IMB_PORT, "Christie", ChristieSocketCommands.class);
 		Thread christieThread = new Thread(christieConnection);
 		christieThread.start();

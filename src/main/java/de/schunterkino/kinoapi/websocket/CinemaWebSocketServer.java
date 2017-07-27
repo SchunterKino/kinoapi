@@ -11,13 +11,16 @@ import org.java_websocket.server.WebSocketServer;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
+import de.schunterkino.kinoapi.christie.ChristieCommand;
 import de.schunterkino.kinoapi.christie.ChristieSocketCommands;
 import de.schunterkino.kinoapi.christie.IChristieStatusUpdateReceiver;
 import de.schunterkino.kinoapi.dolby.DecodeMode;
+import de.schunterkino.kinoapi.dolby.DolbyCommand;
 import de.schunterkino.kinoapi.dolby.DolbySocketCommands;
 import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
 import de.schunterkino.kinoapi.dolby.InputMode;
 import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
+import de.schunterkino.kinoapi.jnior.JniorCommand;
 import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
@@ -50,18 +53,18 @@ public class CinemaWebSocketServer extends WebSocketServer
 	/**
 	 * Socket connection and protocol handler for the Dolby CP750.
 	 */
-	private BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolby;
+	private BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolby;
 
 	/**
 	 * Socket connection and protocol handler for the Integ Jnior 310 automation
 	 * box.
 	 */
-	private BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver> jnior;
+	private BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver, JniorCommand> jnior;
 
 	/**
 	 * Socket connection to trigger global triggers on the Christie IMB.
 	 */
-	private BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver> christie;
+	private BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver, ChristieCommand> christie;
 
 	/**
 	 * List of JSON protocol incoming command handlers. Incoming messages on the
@@ -80,9 +83,9 @@ public class CinemaWebSocketServer extends WebSocketServer
 	 * @param jnior
 	 *            Instance of Jnior socket client.
 	 */
-	public CinemaWebSocketServer(int port, BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver> dolby,
-			BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver> jnior,
-			BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver> christie) {
+	public CinemaWebSocketServer(int port, BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolby,
+			BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver, JniorCommand> jnior,
+			BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver, ChristieCommand> christie) {
 		super(new InetSocketAddress(port));
 
 		this.gson = new Gson();

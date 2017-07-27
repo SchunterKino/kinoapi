@@ -7,7 +7,7 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 
-public class BaseSocketClient<T extends BaseSocketCommands<S>, S> implements Runnable {
+public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implements Runnable {
 	private String ip;
 	private int port;
 	private String log_tag;

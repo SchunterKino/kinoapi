@@ -1,10 +1,5 @@
 package de.schunterkino.kinoapi.jnior;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.Iterator;
-import java.util.LinkedList;
-
 import com.google.gson.JsonSyntaxException;
 
 import de.schunterkino.kinoapi.sockets.BaseSocketCommands;
@@ -13,77 +8,27 @@ import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.jnior.SetLightLevelMessage;
 
-public class JniorSocketCommands extends BaseSocketCommands<IJniorStatusUpdateReceiver> {
+public class JniorSocketCommands extends BaseSocketCommands<IJniorStatusUpdateReceiver, JniorCommand> {
 
-	private CommandContainer<Commands> noneCommand = new CommandContainer<>(Commands.None);
-
-	private LinkedList<CommandContainer<Commands>> commandQueue;
-	private CommandContainer<Commands> currentCommand;
-
+	protected int UPDATE_INTERVAL = 10000;
+	
 	public JniorSocketCommands() {
 		super();
-		this.commandQueue = new LinkedList<>();
-		this.currentCommand = noneCommand;
+		ignoreResponses();
 	}
-
+	
 	@Override
-	public void run() {
+	protected void onSocketConnected() {
 		// Notify listeners.
 		synchronized (listeners) {
 			for (IJniorStatusUpdateReceiver listener : listeners) {
 				listener.onJniorConnected();
 			}
 		}
+	}
 
-		// Go in a loop to process the data on the socket.
-		try {
-			do {
-				// See if someone wanted to send some command.
-				currentCommand = noneCommand;
-				synchronized (commandQueue) {
-					if (!commandQueue.isEmpty())
-						currentCommand = commandQueue.removeFirst();
-				}
-
-				// Send the right command now.
-				String command = null;
-				switch (currentCommand.cmd) {
-				case None:
-					break;
-				case SetLightLevel:
-					switch (currentCommand.value) {
-					case 0:
-						// Close relay output 1 for 500 ms.
-						command = "c1p=500";
-						break;
-					case 1:
-						command = "c2p=500";
-						break;
-					case 2:
-						command = "c3p=500";
-						break;
-					case 3:
-						command = "c4p=500";
-						break;
-					}
-					break;
-				}
-
-				if (command != null) {
-					socket.getOutputStream().write((command + "\r\n").getBytes(Charset.forName("ascii")));
-					System.out.println("Jnior: Sent: " + command);
-				}
-
-				// Wait a bit until processing the next command.
-				Thread.sleep(500);
-			} while (!stop);
-		} catch (IOException | InterruptedException e) {
-			if (!stop) {
-				System.err.println("Jnior: Error in reader thread: " + e.getMessage());
-				e.printStackTrace();
-			}
-		}
-
+	@Override
+	protected void onSocketDisconnected() {
 		// Notify listeners.
 		synchronized (listeners) {
 			for (IJniorStatusUpdateReceiver listener : listeners) {
@@ -92,25 +37,40 @@ public class JniorSocketCommands extends BaseSocketCommands<IJniorStatusUpdateRe
 		}
 	}
 
-	public void setLightLevel(int level) {
-		synchronized (commandQueue) {
-			addCommand(Commands.SetLightLevel, level);
-		}
+	@Override
+	protected boolean onReceiveCommandOutput(String input) {
+		return true; // Don't care for stuff sent to us.
 	}
 
-	private void addCommand(Commands cmd, int value) {
-		synchronized (commandQueue) {
-			// Make sure this is the only command of that type in the queue.
-			Iterator<CommandContainer<Commands>> i = commandQueue.iterator();
-			while (i.hasNext()) {
-				CommandContainer<Commands> command = i.next();
-				if (command.cmd == cmd)
-					i.remove();
+	@Override
+	protected String getCommandString(CommandContainer<JniorCommand> cmd) {
+		String command = null;
+		switch (cmd.cmd) {
+		case SetLightLevel:
+			switch (cmd.value) {
+			case 0:
+				// Close relay output 1 for 500 ms.
+				command = "c1p=500";
+				break;
+			case 1:
+				command = "c2p=500";
+				break;
+			case 2:
+				command = "c3p=500";
+				break;
+			case 3:
+				command = "c4p=500";
+				break;
 			}
-
-			// Add the new command now.
-			commandQueue.add(new CommandContainer<>(cmd, value));
+			break;
 		}
+		return command;
+	}
+
+	
+
+	public void setLightLevel(int level) {
+		addCommand(JniorCommand.SetLightLevel, level);
 	}
 
 	@Override
