@@ -66,7 +66,7 @@ public class JniorSocketCommands extends BaseSocketCommands<IJniorStatusUpdateRe
 			}
 			break;
 		case KeepAlive:
-			command = "nope";
+			command = "";
 			break;
 		}
 		return command;
