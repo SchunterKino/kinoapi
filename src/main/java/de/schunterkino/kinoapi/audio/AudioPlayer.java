@@ -2,6 +2,7 @@ package de.schunterkino.kinoapi.audio;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.time.Instant;
 
 import javax.sound.sampled.AudioFormat;
@@ -35,14 +36,17 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 	private BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolby;
 
 	private boolean lampTurnedOff;
-	InputMode oldInputMode;
-	Thread playThread = null;
+	private InputMode oldInputMode;
+	private Thread playThread = null;
+	private SecureRandom rnd;
 
 	public AudioPlayer(BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolby,
 			SchunterServerSocket server) {
 		this.dolby = dolby;
 		dolby.getCommands().registerListener(this);
 		server.registerListener(this);
+
+		rnd = new SecureRandom();
 	}
 
 	/**
@@ -150,7 +154,10 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 
 		// Play a nice sound, now that the lamp is cooled off.
 		lampTurnedOff = false;
-		play("sounds/yeah1.wav");
+
+		// Play one of the 3 sounds randomly.
+		int yeahNum = rnd.nextInt(3);
+		play("sounds/yeah" + yeahNum + ".wav");
 	}
 
 	@Override
