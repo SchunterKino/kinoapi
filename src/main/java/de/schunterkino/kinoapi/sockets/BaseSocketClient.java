@@ -15,7 +15,8 @@ public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implemen
 	private Socket socket;
 	private T commands;
 	private boolean stop;
-	
+	private boolean alreadyPrintedError;
+
 	// Wait X seconds after a connection problem until trying again.
 	private static int RECONNECT_TIME = 10;
 
@@ -31,6 +32,7 @@ public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implemen
 			e.printStackTrace();
 		}
 		this.stop = false;
+		this.alreadyPrintedError = false;
 	}
 
 	@Override
@@ -50,6 +52,10 @@ public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implemen
 
 					System.out.printf("%s: Connected to %s:%d.%n", log_tag, ip, port);
 
+					// Print a reconnect error message next time again now that
+					// we connected again.
+					alreadyPrintedError = false;
+
 					// Wait for the thread to be done.
 					// The thread only terminates, if there is an issue with the
 					// socket or we requested it to stop.
@@ -58,9 +64,13 @@ public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implemen
 				} catch (IOException e) {
 					// The readerThread will die on its own if it already
 					// started.
-					if (!stop)
+					if (!stop && !alreadyPrintedError) {
 						System.err.printf(
-								"%s: Error in connection. Reconnecting in %d seconds. Exception: %s%n", log_tag, RECONNECT_TIME, e.getMessage());
+								"%s: Error in connection. Trying to reconnect every %d seconds. Exception: %s%n",
+								log_tag, RECONNECT_TIME, e.getMessage());
+						// Don't print the error again if the server stays down.
+						alreadyPrintedError = true;
+					}
 				}
 			} catch (InterruptedException e) {
 				System.err.printf("%s: Error while waiting for reader thread: %s%n", log_tag, e.getMessage());
@@ -79,9 +89,9 @@ public class BaseSocketClient<T extends BaseSocketCommands<S, V>, S, V> implemen
 			if (stop)
 				break;
 
-			// Wait 30 seconds until we try to connect again.
+			// Wait X seconds until we try to connect again.
 			try {
-				Thread.sleep(RECONNECT_TIME*1000);
+				Thread.sleep(RECONNECT_TIME * 1000);
 			} catch (InterruptedException e) {
 				if (!stop)
 					e.printStackTrace();

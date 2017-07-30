@@ -42,6 +42,7 @@ public class SchunterServerSocket implements Runnable {
 				while (!stop) {
 					// Wait for the IMB to connect.
 					Socket client = server.accept();
+					System.out.printf("ServerSocket: Child socket connected from %s%n", client.getInetAddress());
 					handleChildSocket(client);
 				}
 			} catch (IOException e) {
