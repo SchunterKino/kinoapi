@@ -55,7 +55,7 @@ public class App {
 
 		// Create an audio player to play some nice tunes when the lamp is
 		// cooled off.
-		new AudioPlayer(dolbyConnection, serverSocket);
+		AudioPlayer audio = new AudioPlayer(dolbyConnection, serverSocket);
 
 		// Start the websocket server now.
 		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer(WEBSOCKET_PORT, dolbyConnection,
@@ -129,6 +129,9 @@ public class App {
 				// We want to stop anyways. Errors are ok.
 			}
 			System.out.println("ServerSocket: Server stopped.");
+			
+			// Kill any running audio thread.
+			audio.stopSound();
 		}
 	}
 }

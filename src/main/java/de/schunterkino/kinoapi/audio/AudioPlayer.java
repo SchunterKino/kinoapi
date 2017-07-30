@@ -36,6 +36,7 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 
 	private boolean lampTurnedOff;
 	InputMode oldInputMode;
+	Thread playThread = null;
 
 	public AudioPlayer(BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolby,
 			SchunterServerSocket server) {
@@ -59,7 +60,7 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 		File audioFile = new File(audioFilePath);
 
 		// Try to play the audio in a seperate non-blocking thread.
-		new Thread(new Runnable() {
+		playThread = new Thread(new Runnable() {
 			@Override
 			public void run() {
 				try {
@@ -78,13 +79,13 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 					playCompleted = false;
 					audioClip.start();
 
-					while (!playCompleted) {
-						// wait for the playback completes
-						try {
-							Thread.sleep(1000);
-						} catch (InterruptedException ex) {
-							ex.printStackTrace();
+					try {
+						while (!playCompleted) {
+							// wait for the playback completes
+							Thread.sleep(500);
 						}
+					} catch (InterruptedException ex) {
+						ex.printStackTrace();
 					}
 
 					audioClip.close();
@@ -100,8 +101,10 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 					System.out.println("Error playing the audio file.");
 					ex.printStackTrace();
 				}
+				playThread = null;
 			}
-		}).start();
+		});
+		playThread.start();
 	}
 
 	/**
@@ -160,6 +163,10 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 		if (!dolby.isConnected() || dolby.getCommands().isMuted())
 			return;
 
+		// Can't process this too fast again.
+		if (lampTurnedOff)
+			return;
+
 		// Save current input source of audio.
 		oldInputMode = dolby.getCommands().getInputMode();
 
@@ -170,4 +177,15 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 		dolby.getCommands().setInputMode(InputMode.NonSync);
 	}
 
+	public void stopSound() {
+		if (playThread != null) {
+			playThread.interrupt();
+			try {
+				playThread.join();
+			} catch (InterruptedException e) {
+				// Just stahp.
+			}
+			playThread = null;
+		}
+	}
 }

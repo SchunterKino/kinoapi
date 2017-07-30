@@ -85,7 +85,7 @@ public class ChristieSocketCommands extends BaseSocketCommands<IChristieStatusUp
 			command = "ComputerScope";
 			break;
 		case KeepAlive:
-			command = "PenisKopf";
+			command = "StillHere?";
 			break;
 		}
 		return command;
