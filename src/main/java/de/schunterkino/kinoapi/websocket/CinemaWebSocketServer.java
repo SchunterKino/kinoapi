@@ -1,13 +1,34 @@
 package de.schunterkino.kinoapi.websocket;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.KeyFactory;
+import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedList;
 
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.xml.bind.DatatypeConverter;
+
 import org.java_websocket.WebSocket;
+import org.java_websocket.WebSocketImpl;
 import org.java_websocket.handshake.ClientHandshake;
+import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.java_websocket.server.WebSocketServer;
 
 import com.google.gson.Gson;
@@ -122,6 +143,21 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 
 		this.server = server;
 		server.registerListener(this);
+	}
+
+	@Override
+	public void start() {
+
+		// Setup the SSL context for WSS support.
+		WebSocketImpl.DEBUG = true;
+
+		SSLContext context = getSSLContext();
+		if (context != null) {
+			setWebSocketFactory(new DefaultSSLWebSocketServerFactory(context));
+		}
+		setConnectionLostTimeout(30);
+
+		super.start();
 	}
 
 	@Override
@@ -309,5 +345,76 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 	public void onLampTurnedOff(Instant lampOffTime) {
 		LampOffMessage msg = new LampOffMessage(lampOffTime);
 		sendToAll(gson.toJson(msg));
+	}
+
+	/*
+	 * SSL helpers
+	 */
+	private SSLContext getSSLContext() {
+		SSLContext context;
+		String password = "noonewillseethisongit"; // TODO put into config :B
+		String pathname = "/etc/letsencrypt/live/remote.schunterkino.de";
+		try {
+			context = SSLContext.getInstance("TLS");
+
+			byte[] certBytes = parseDERFromPEM(getBytes(new File(pathname + File.separator + "cert.pem")),
+					"-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----");
+			byte[] keyBytes = parseDERFromPEM(getBytes(new File(pathname + File.separator + "privkey.pem")),
+					"-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----");
+
+			X509Certificate cert = generateCertificateFromDER(certBytes);
+			RSAPrivateKey key = generatePrivateKeyFromDER(keyBytes);
+
+			KeyStore keystore = KeyStore.getInstance("JKS");
+			keystore.load(null);
+			keystore.setCertificateEntry("cert-alias", cert);
+			keystore.setKeyEntry("key-alias", key, password.toCharArray(), new Certificate[] { cert });
+
+			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+			kmf.init(keystore, password.toCharArray());
+
+			KeyManager[] km = kmf.getKeyManagers();
+
+			context.init(km, null, null);
+		} catch (Exception e) {
+			context = null;
+		}
+		return context;
+	}
+
+	private byte[] parseDERFromPEM(byte[] pem, String beginDelimiter, String endDelimiter) {
+		String data = new String(pem);
+		String[] tokens = data.split(beginDelimiter);
+		tokens = tokens[1].split(endDelimiter);
+		return DatatypeConverter.parseBase64Binary(tokens[0]);
+	}
+
+	private RSAPrivateKey generatePrivateKeyFromDER(byte[] keyBytes)
+			throws InvalidKeySpecException, NoSuchAlgorithmException {
+		PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
+
+		KeyFactory factory = KeyFactory.getInstance("RSA");
+
+		return (RSAPrivateKey) factory.generatePrivate(spec);
+	}
+
+	private X509Certificate generateCertificateFromDER(byte[] certBytes) throws CertificateException {
+		CertificateFactory factory = CertificateFactory.getInstance("X.509");
+
+		return (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(certBytes));
+	}
+
+	private byte[] getBytes(File file) {
+		byte[] bytesArray = new byte[(int) file.length()];
+
+		FileInputStream fis = null;
+		try {
+			fis = new FileInputStream(file);
+			fis.read(bytesArray); // read file into bytes[]
+			fis.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return bytesArray;
 	}
 }
