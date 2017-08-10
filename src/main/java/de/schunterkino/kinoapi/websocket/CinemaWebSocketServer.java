@@ -26,7 +26,6 @@ import javax.net.ssl.SSLContext;
 import javax.xml.bind.DatatypeConverter;
 
 import org.java_websocket.WebSocket;
-import org.java_websocket.WebSocketImpl;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.java_websocket.server.WebSocketServer;
@@ -149,7 +148,7 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 	public void start() {
 
 		// Setup the SSL context for WSS support.
-		WebSocketImpl.DEBUG = true;
+		//WebSocketImpl.DEBUG = true;
 
 		SSLContext context = getSSLContext();
 		if (context != null) {
