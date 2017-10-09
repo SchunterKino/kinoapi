@@ -9,7 +9,7 @@ When a websocket connection to the server on port 8641 is opened the server send
    * `decode_mode_changed` - Current active decode mode for Digital 1 input. *Only sent if the Dolby connection is available.*
  * `lights_connection` - Indicate if the Jnior connection for light regulation is available.
  * `projector_connection` - Indicate if the Christie IMB connection for projector control is available.
-   * `lamp_off` - Inform if the lamp was recently turned off. Not sent anymore after 2 hours. *Only sent if the Christie connection is available.*
+ * `power_mode_changed` - The current status of the projector.
 
 ## Message format
 Every message is encoded as a JSON object containing at least a `msg_type` and an `action` string attribute.
@@ -73,11 +73,20 @@ Sent when the Christie Projector for playback control gets connected or disconne
  * `action` - string: `projector_connection`
  * `connected` - boolean: `true` if connection to Christie IMB-S2 is available, `false` otherwise.
 
-#### Lamp finished cooling
-Sent when the lamp of the projector finished cooling and turned off.
+### Christie Solaria PIB
+#### Power status changed
+Sent when the power status of the projector changed like starting the IMB, lamp on/off/cooling, etc.
  * `msg_type` - string: `playback`
- * `action` - string: `lamp_off`
- * `timestamp` - string: ISO 8601 formated point in time of when the lamp was turned off.
+ * `action` - string: `power_mode_changed`
+ * `mode` - int: From the serial API documentation:
+   * `0`: Full power mode. The projector is ready for lamp on.
+   * `1`: Power on. The projector is turned on and the lamp is on.
+   * `2`: Christie IMB standby mode.
+   * `3`: Power off or standby mode. All electronics except the Projector Control Module (PCM) turn off.
+   * `4`: Cool down. The projector stays in cooling mode for X minutes after the lamp is turned off.
+   * `5`: Warm up. This is the intermediate stage between standby and full power mode.
+ * `timestamp` - string: ISO 8601 formated point in time of when the power mode change was observed.
+ * `cooldown_time` - int: The time the lamp still had to be cooled when the power mode changed to cooling in seconds.
 
 ## Client -> Server
 ### Dolby CP750 Audio

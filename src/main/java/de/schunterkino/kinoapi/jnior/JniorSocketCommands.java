@@ -2,13 +2,13 @@ package de.schunterkino.kinoapi.jnior;
 
 import com.google.gson.JsonSyntaxException;
 
-import de.schunterkino.kinoapi.sockets.BaseSocketCommands;
+import de.schunterkino.kinoapi.sockets.BaseCommands;
 import de.schunterkino.kinoapi.sockets.CommandContainer;
 import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.jnior.SetLightLevelMessage;
 
-public class JniorSocketCommands extends BaseSocketCommands<IJniorStatusUpdateReceiver, JniorCommand> {
+public class JniorSocketCommands extends BaseCommands<IJniorStatusUpdateReceiver, JniorCommand> {
 
 	protected int UPDATE_INTERVAL = 10000;
 

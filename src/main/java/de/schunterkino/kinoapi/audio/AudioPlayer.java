@@ -15,6 +15,10 @@ import javax.sound.sampled.LineListener;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
+import de.schunterkino.kinoapi.christie.serial.ISolariaSerialStatusUpdateReceiver;
+import de.schunterkino.kinoapi.christie.serial.PowerMode;
+import de.schunterkino.kinoapi.christie.serial.SolariaCommand;
+import de.schunterkino.kinoapi.christie.serial.SolariaSocketCommands;
 import de.schunterkino.kinoapi.dolby.DecodeMode;
 import de.schunterkino.kinoapi.dolby.DolbyCommand;
 import de.schunterkino.kinoapi.dolby.DolbySocketCommands;
@@ -22,6 +26,7 @@ import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
 import de.schunterkino.kinoapi.dolby.InputMode;
 import de.schunterkino.kinoapi.listen.IServerSocketStatusUpdateReceiver;
 import de.schunterkino.kinoapi.listen.SchunterServerSocket;
+import de.schunterkino.kinoapi.sockets.BaseSerialPortClient;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 
 /**
@@ -31,7 +36,8 @@ import de.schunterkino.kinoapi.sockets.BaseSocketClient;
  * @author www.codejava.net
  *
  */
-public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IServerSocketStatusUpdateReceiver {
+public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IServerSocketStatusUpdateReceiver,
+		ISolariaSerialStatusUpdateReceiver {
 
 	private BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolby;
 
@@ -41,9 +47,11 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 	private SecureRandom rnd;
 
 	public AudioPlayer(BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolby,
+			BaseSerialPortClient<SolariaSocketCommands, ISolariaSerialStatusUpdateReceiver, SolariaCommand> solaria,
 			SchunterServerSocket server) {
 		this.dolby = dolby;
 		dolby.getCommands().registerListener(this);
+		solaria.getCommands().registerListener(this);
 		server.registerListener(this);
 
 		rnd = new SecureRandom();
@@ -166,6 +174,17 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 
 	@Override
 	public void onLampTurnedOff(Instant lampOffTime) {
+		preparePlayingSound();
+	}
+
+	@Override
+	public void onPowerModeChanged(PowerMode mode, PowerMode oldMode, Instant timestamp, Integer cooldown) {
+		// Play a sound when the mode changes from cooling to something else.
+		if (oldMode == PowerMode.CoolDown)
+			preparePlayingSound();
+	}
+
+	private void preparePlayingSound() {
 		// Can't do anything if no Audio.
 		if (!dolby.isConnected() || dolby.getCommands().isMuted())
 			return;

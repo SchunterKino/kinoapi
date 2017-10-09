@@ -14,32 +14,33 @@ import java.util.Map.Entry;
 import com.google.gson.Gson;
 
 import de.schunterkino.kinoapi.websocket.IWebSocketMessageHandler;
+import purejavacomm.SerialPort;
 
-public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMessageHandler {
+public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Runnable, IWebSocketMessageHandler {
 
 	protected String LOG_TAG = this.getClass().getSimpleName();
 
 	protected int UPDATE_INTERVAL = 2000;
 
-	protected Socket socket;
+	protected LineWrapper socket;
 	protected boolean stop;
-	protected LinkedList<T> listeners;
+	protected LinkedList<ListenerInterface> listeners;
 	protected Gson gson;
 
-	private LinkedList<CommandContainer<V>> commandQueue;
-	private CommandContainer<V> noneCommand = new CommandContainer<>(null);
-	private CommandContainer<V> currentCommand = noneCommand;
+	private LinkedList<CommandContainer<CommandEnum>> commandQueue;
+	private CommandContainer<CommandEnum> noneCommand = new CommandContainer<>(null);
+	private CommandContainer<CommandEnum> currentCommand = noneCommand;
 
 	// A map to remember when we last sent a command.
 	// The command is added to the queue again if the last time is longer than
 	// UPDATE_INTERVAL ago.
-	private HashMap<V, Instant> updateCommands;
+	private HashMap<CommandEnum, Instant> updateCommands;
 
 	// Maybe we're not interested at all in what the server has to say.
 	// Don't wait for responses.
 	private boolean ignoreResponses;
 
-	protected BaseSocketCommands() {
+	protected BaseCommands() {
 		this.socket = null;
 		this.stop = false;
 		this.listeners = new LinkedList<>();
@@ -55,10 +56,14 @@ public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMe
 	}
 
 	public void setSocket(Socket socket) {
-		this.socket = socket;
+		this.socket = new LineWrapper(socket);
+	}
+	
+	public void setSerialPort(SerialPort serial) {
+		this.socket = new LineWrapper(serial);
 	}
 
-	public void registerListener(T listener) {
+	public void registerListener(ListenerInterface listener) {
 		synchronized (listeners) {
 			listeners.add(listener);
 		}
@@ -100,7 +105,7 @@ public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMe
 						// UPDATE_INTERVAL if the current command is None.
 						// TODO: Increase the interval if no websocket clients
 						// are connected.
-						for (Entry<V, Instant> e : updateCommands.entrySet()) {
+						for (Entry<CommandEnum, Instant> e : updateCommands.entrySet()) {
 							if (e.getValue() == null
 									|| Duration.between(e.getValue(), Instant.now()).toMillis() > UPDATE_INTERVAL)
 								addCommand(e.getKey());
@@ -151,9 +156,9 @@ public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMe
 
 	protected abstract boolean onReceiveCommandOutput(String input);
 
-	protected abstract String getCommandString(CommandContainer<V> cmd);
+	protected abstract String getCommandString(CommandContainer<CommandEnum> cmd);
 
-	private boolean isRepeatingCommand(V cmd) {
+	private boolean isRepeatingCommand(CommandEnum cmd) {
 		return updateCommands.containsKey(cmd);
 	}
 
@@ -171,16 +176,16 @@ public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMe
 		return new String(buffer, 0, ret_read);
 	}
 
-	protected CommandContainer<V> getCurrentCommand() {
+	protected CommandContainer<CommandEnum> getCurrentCommand() {
 		return currentCommand;
 	}
 
-	protected void addCommand(V cmd, int value) {
+	protected void addCommand(CommandEnum cmd, int value) {
 		synchronized (commandQueue) {
 			// Make sure this is the only command of that type in the queue.
-			Iterator<CommandContainer<V>> i = commandQueue.iterator();
+			Iterator<CommandContainer<CommandEnum>> i = commandQueue.iterator();
 			while (i.hasNext()) {
-				CommandContainer<V> command = i.next();
+				CommandContainer<CommandEnum> command = i.next();
 				if (command.cmd == cmd)
 					i.remove();
 			}
@@ -190,11 +195,11 @@ public abstract class BaseSocketCommands<T, V> implements Runnable, IWebSocketMe
 		}
 	}
 
-	protected void addCommand(V cmd) {
+	protected void addCommand(CommandEnum cmd) {
 		addCommand(cmd, 0);
 	}
 
-	protected void watchCommand(V cmd) {
+	protected void watchCommand(CommandEnum cmd) {
 		updateCommands.put(cmd, null);
 	}
 

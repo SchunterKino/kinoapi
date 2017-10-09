@@ -1,18 +1,18 @@
 package de.schunterkino.kinoapi.sockets;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.UnknownHostException;
 
-public class BaseSocketClient<T extends BaseCommands<S, V>, S, V> implements Runnable {
-	private String ip;
-	private int port;
+import purejavacomm.CommPort;
+import purejavacomm.CommPortIdentifier;
+import purejavacomm.NoSuchPortException;
+import purejavacomm.PortInUseException;
+import purejavacomm.SerialPort;
+import purejavacomm.UnsupportedCommOperationException;
+
+public class BaseSerialPortClient<T extends BaseCommands<S, V>, S, V> implements Runnable {
+	private String portName;
 	private String log_tag;
-	private SocketAddress socketAddress;
-	private Socket socket;
+	private SerialPort serial;
 	private T commands;
 	private boolean stop;
 	private boolean alreadyPrintedError;
@@ -20,15 +20,13 @@ public class BaseSocketClient<T extends BaseCommands<S, V>, S, V> implements Run
 	// Wait X seconds after a connection problem until trying again.
 	private static int RECONNECT_TIME = 10;
 
-	public BaseSocketClient(String ip, int port, Class<T> typeArgumentClass) {
-		this.ip = ip;
-		this.port = port;
+	public BaseSerialPortClient(String portName, Class<T> typeArgumentClass) {
+		this.portName = portName;
 		this.log_tag = typeArgumentClass.getSimpleName();
-		this.socket = null;
+		this.serial = null;
 		try {
-			this.socketAddress = new InetSocketAddress(InetAddress.getByName(ip), port);
 			this.commands = typeArgumentClass.newInstance();
-		} catch (InstantiationException | IllegalAccessException | UnknownHostException e) {
+		} catch (InstantiationException | IllegalAccessException e) {
 			e.printStackTrace();
 		}
 		this.stop = false;
@@ -41,16 +39,31 @@ public class BaseSocketClient<T extends BaseCommands<S, V>, S, V> implements Run
 		while (!stop) {
 			try {
 				try {
-					socket = new Socket();
-					socket.connect(socketAddress, 5000);
-					socket.setSoTimeout(5000);
+					CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier(portName);
+					if (portIdentifier.isCurrentlyOwned())
+						throw new IOException("Port " + portName + " is currently in use");
 
-					// Start a thread to handle telnet messages.
-					commands.setSocket(socket);
+					int timeout = 2000;
+					CommPort commPort = portIdentifier.open(this.getClass().getName(), timeout);
+
+					if (!(commPort instanceof SerialPort)) {
+						commPort.close();
+						throw new IOException(portName + " is not a serial port.");
+					}
+
+					serial = (SerialPort) commPort;
+					serial.setSerialPortParams(115200, SerialPort.DATABITS_8, SerialPort.STOPBITS_1,
+							SerialPort.PARITY_NONE);
+					// serialPort.setFlowControlMode(SerialPort.FLOWCONTROL_RTSCTS_IN
+					// |
+					// SerialPort.FLOWCONTROL_RTSCTS_OUT);
+
+					// Start a thread to handle messages.
+					commands.setSerialPort(serial);
 					Thread readerThread = new Thread(commands);
 					readerThread.start();
 
-					System.out.printf("%s: Connected to %s:%d.%n", log_tag, ip, port);
+					System.out.printf("%s: Opened serial connection on %s.%n", log_tag, portName);
 
 					// Print a reconnect error message next time again now that
 					// we connected again.
@@ -61,7 +74,7 @@ public class BaseSocketClient<T extends BaseCommands<S, V>, S, V> implements Run
 					// socket or we requested it to stop.
 					readerThread.join();
 
-				} catch (IOException e) {
+				} catch (IOException | NoSuchPortException | PortInUseException | UnsupportedCommOperationException e) {
 					// The readerThread will die on its own if it already
 					// started.
 					if (!stop && !alreadyPrintedError) {
@@ -77,13 +90,9 @@ public class BaseSocketClient<T extends BaseCommands<S, V>, S, V> implements Run
 			}
 
 			// Properly shutdown the client connection.
-			try {
-				if (isConnected()) {
-					socket.close();
-					System.out.printf("%s: Connection closed.%n", log_tag);
-				}
-			} catch (IOException e) {
-				System.err.printf("%s: Error while closing connection: %s%n", log_tag, e.getMessage());
+			if (isConnected()) {
+				serial.close();
+				System.out.printf("%s: Connection closed.%n", log_tag);
 			}
 
 			if (stop)
@@ -100,7 +109,7 @@ public class BaseSocketClient<T extends BaseCommands<S, V>, S, V> implements Run
 	}
 
 	public boolean isConnected() {
-		return socket != null && socket.isConnected() && !socket.isClosed();
+		return serial != null;
 	}
 
 	public T getCommands() {
@@ -111,11 +120,11 @@ public class BaseSocketClient<T extends BaseCommands<S, V>, S, V> implements Run
 		stop = true;
 		if (commands != null)
 			commands.stop();
-		try {
-			if (socket != null)
-				socket.close();
-		} catch (IOException e) {
-			// Who cares.
+
+		if (serial != null) {
+			serial.close();
+			serial = null;
 		}
+
 	}
 }

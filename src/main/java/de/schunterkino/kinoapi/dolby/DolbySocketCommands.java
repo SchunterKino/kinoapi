@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 
 import com.google.gson.JsonSyntaxException;
 
-import de.schunterkino.kinoapi.sockets.BaseSocketCommands;
+import de.schunterkino.kinoapi.sockets.BaseCommands;
 import de.schunterkino.kinoapi.sockets.CommandContainer;
 import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
@@ -16,7 +16,7 @@ import de.schunterkino.kinoapi.websocket.messages.volume.SetInputModeMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.SetMuteStatusMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.SetVolumeMessage;
 
-public class DolbySocketCommands extends BaseSocketCommands<IDolbyStatusUpdateReceiver, DolbyCommand> {
+public class DolbySocketCommands extends BaseCommands<IDolbyStatusUpdateReceiver, DolbyCommand> {
 
 	// Volume control
 	private Pattern faderPattern;

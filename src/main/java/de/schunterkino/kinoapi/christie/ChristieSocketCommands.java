@@ -2,13 +2,13 @@ package de.schunterkino.kinoapi.christie;
 
 import com.google.gson.JsonSyntaxException;
 
-import de.schunterkino.kinoapi.sockets.BaseSocketCommands;
+import de.schunterkino.kinoapi.sockets.BaseCommands;
 import de.schunterkino.kinoapi.sockets.CommandContainer;
 import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.SetInputModeMessage;
 
-public class ChristieSocketCommands extends BaseSocketCommands<IChristieStatusUpdateReceiver, ChristieCommand> {
+public class ChristieSocketCommands extends BaseCommands<IChristieStatusUpdateReceiver, ChristieCommand> {
 
 	protected int UPDATE_INTERVAL = 10000;
 
@@ -95,7 +95,7 @@ public class ChristieSocketCommands extends BaseSocketCommands<IChristieStatusUp
 	public boolean onMessage(BaseMessage baseMsg, String message)
 			throws WebSocketCommandException, JsonSyntaxException {
 
-		// Handle all Dolby Volume related commands.
+		// Handle all IMB playback related commands.
 		if (!"playback".equals(baseMsg.getMessageType()))
 			return false;
 

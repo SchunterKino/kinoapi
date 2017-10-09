@@ -8,6 +8,9 @@ import de.schunterkino.kinoapi.audio.AudioPlayer;
 import de.schunterkino.kinoapi.christie.ChristieCommand;
 import de.schunterkino.kinoapi.christie.ChristieSocketCommands;
 import de.schunterkino.kinoapi.christie.IChristieStatusUpdateReceiver;
+import de.schunterkino.kinoapi.christie.serial.ISolariaSerialStatusUpdateReceiver;
+import de.schunterkino.kinoapi.christie.serial.SolariaCommand;
+import de.schunterkino.kinoapi.christie.serial.SolariaSocketCommands;
 import de.schunterkino.kinoapi.dolby.DolbyCommand;
 import de.schunterkino.kinoapi.dolby.DolbySocketCommands;
 import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
@@ -15,6 +18,7 @@ import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.JniorCommand;
 import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
 import de.schunterkino.kinoapi.listen.SchunterServerSocket;
+import de.schunterkino.kinoapi.sockets.BaseSerialPortClient;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.CinemaWebSocketServer;
 
@@ -28,6 +32,7 @@ public class App {
 	private final static String JNIOR_IP = "10.100.152.12";
 	private final static int JNIOR_PORT = 9202;
 	private final static int LISTEN_PORT = 52471;
+	private final static String SERIAL_PORT = "/dev/ttyS0";
 
 	public static void main(String[] args) {
 
@@ -49,17 +54,22 @@ public class App {
 		Thread christieThread = new Thread(christieConnection);
 		christieThread.start();
 
+		BaseSerialPortClient<SolariaSocketCommands, ISolariaSerialStatusUpdateReceiver, SolariaCommand> solariaConnection = new BaseSerialPortClient<>(
+				SERIAL_PORT, SolariaSocketCommands.class);
+		Thread solariaThread = new Thread(solariaConnection);
+		solariaThread.start();
+
 		SchunterServerSocket serverSocket = new SchunterServerSocket(LISTEN_PORT);
 		Thread serverThread = new Thread(serverSocket);
 		serverThread.start();
 
 		// Create an audio player to play some nice tunes when the lamp is
 		// cooled off.
-		AudioPlayer audio = new AudioPlayer(dolbyConnection, serverSocket);
+		AudioPlayer audio = new AudioPlayer(dolbyConnection, solariaConnection, serverSocket);
 
 		// Start the websocket server now.
 		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer(WEBSOCKET_PORT, dolbyConnection,
-				jniorConnection, christieConnection, serverSocket);
+				jniorConnection, christieConnection, solariaConnection, serverSocket);
 		websocketServer.start();
 		System.out.println("WebSocket: Server created on port: " + websocketServer.getPort());
 
@@ -83,6 +93,7 @@ public class App {
 			dolbyConnection.stopServer();
 			jniorConnection.stopServer();
 			christieConnection.stopServer();
+			solariaConnection.stopServer();
 			serverSocket.stopServer();
 
 			// Shutdown the servers.
@@ -122,6 +133,15 @@ public class App {
 			System.out.println("Christie: Client stopped.");
 
 			try {
+				if (!solariaConnection.isConnected())
+					solariaThread.interrupt();
+				solariaThread.join();
+			} catch (InterruptedException e) {
+				// We want to stop anyways. Errors are ok.
+			}
+			System.out.println("Solaria: Client stopped.");
+
+			try {
 				if (!serverSocket.isRunning())
 					serverThread.interrupt();
 				serverThread.join();
@@ -129,7 +149,7 @@ public class App {
 				// We want to stop anyways. Errors are ok.
 			}
 			System.out.println("ServerSocket: Server stopped.");
-			
+
 			// Kill any running audio thread.
 			audio.stopSound();
 		}
