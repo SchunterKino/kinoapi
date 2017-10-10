@@ -2,7 +2,9 @@ package de.schunterkino.kinoapi;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Properties;
 
 import de.schunterkino.kinoapi.audio.AudioPlayer;
 import de.schunterkino.kinoapi.christie.ChristieCommand;
@@ -23,43 +25,51 @@ import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.CinemaWebSocketServer;
 
 public class App {
-	// TODO: Put in config file.
-	private final static int WEBSOCKET_PORT = 8641;
-	private final static String DOLBY_IP = "10.100.152.16";
-	private final static int DOLBY_PORT = 61408;
-	private final static String CHRISTIE_IMB_IP = "10.100.152.13";
-	private final static int CHRISTIE_IMB_PORT = 5111;
-	private final static String JNIOR_IP = "10.100.152.12";
-	private final static int JNIOR_PORT = 9202;
-	private final static int LISTEN_PORT = 52471;
-	private final static String SERIAL_PORT = "/dev/ttyS0";
+
+	// the configuration file is stored in the class path as a
+	// .properties file
+	private static final String CONFIGURATION_FILE = "/config.properties";
+
+	private static final Properties properties;
+
+	// use static initializer to read the configuration file when the class is
+	// loaded
+	static {
+		properties = new Properties();
+		try (InputStream inputStream = Configuration.class.getResourceAsStream(CONFIGURATION_FILE)) {
+			properties.load(inputStream);
+		} catch (IOException e) {
+			throw new RuntimeException("Failed to read file " + CONFIGURATION_FILE, e);
+		}
+	}
 
 	public static void main(String[] args) {
 
 		// Setup the Dolby CP750 connection.
 		BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolbyConnection = new BaseSocketClient<>(
-				DOLBY_IP, DOLBY_PORT, DolbySocketCommands.class);
+				getConfigurationString("dolby_ip"), getConfigurationInteger("dolby_port"), DolbySocketCommands.class);
 		Thread dolbyThread = new Thread(dolbyConnection);
 		dolbyThread.start();
 
 		// Setup the Integ Jnior 310 connection.
 		BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver, JniorCommand> jniorConnection = new BaseSocketClient<>(
-				JNIOR_IP, JNIOR_PORT, JniorSocketCommands.class);
+				getConfigurationString("jnior_ip"), getConfigurationInteger("jnior_port"), JniorSocketCommands.class);
 		Thread jniorThread = new Thread(jniorConnection);
 		jniorThread.start();
 
 		// Setup the Christie Projection connection.
 		BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver, ChristieCommand> christieConnection = new BaseSocketClient<>(
-				CHRISTIE_IMB_IP, CHRISTIE_IMB_PORT, ChristieSocketCommands.class);
+				getConfigurationString("christie_imb_ip"), getConfigurationInteger("christie_imb_port"),
+				ChristieSocketCommands.class);
 		Thread christieThread = new Thread(christieConnection);
 		christieThread.start();
 
 		BaseSerialPortClient<SolariaSocketCommands, ISolariaSerialStatusUpdateReceiver, SolariaCommand> solariaConnection = new BaseSerialPortClient<>(
-				SERIAL_PORT, SolariaSocketCommands.class);
+				getConfigurationString("pib_serial_port"), SolariaSocketCommands.class);
 		Thread solariaThread = new Thread(solariaConnection);
 		solariaThread.start();
 
-		SchunterServerSocket serverSocket = new SchunterServerSocket(LISTEN_PORT);
+		SchunterServerSocket serverSocket = new SchunterServerSocket(getConfigurationInteger("listen_port"));
 		Thread serverThread = new Thread(serverSocket);
 		serverThread.start();
 
@@ -68,8 +78,8 @@ public class App {
 		AudioPlayer audio = new AudioPlayer(dolbyConnection, solariaConnection, serverSocket);
 
 		// Start the websocket server now.
-		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer(WEBSOCKET_PORT, dolbyConnection,
-				jniorConnection, christieConnection, solariaConnection, serverSocket);
+		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer(getConfigurationInteger("websocket_port"),
+				dolbyConnection, jniorConnection, christieConnection, solariaConnection, serverSocket);
 		websocketServer.start();
 		System.out.println("WebSocket: Server created on port: " + websocketServer.getPort());
 
@@ -153,5 +163,13 @@ public class App {
 			// Kill any running audio thread.
 			audio.stopSound();
 		}
+	}
+
+	public static String getConfigurationString(String key) {
+		return properties.getProperty(key);
+	}
+
+	public static int getConfigurationInteger(String key) {
+		return Integer.parseInt(properties.getProperty(key));
 	}
 }

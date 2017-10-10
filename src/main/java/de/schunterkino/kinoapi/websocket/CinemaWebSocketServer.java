@@ -33,6 +33,7 @@ import org.java_websocket.server.WebSocketServer;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
+import de.schunterkino.kinoapi.App;
 import de.schunterkino.kinoapi.christie.ChristieCommand;
 import de.schunterkino.kinoapi.christie.ChristieSocketCommands;
 import de.schunterkino.kinoapi.christie.IChristieStatusUpdateReceiver;
@@ -380,14 +381,16 @@ public class CinemaWebSocketServer extends WebSocketServer
 	 */
 	private SSLContext getSSLContext() {
 		SSLContext context;
-		String password = "noonewillseethisongit"; // TODO put into config :B
-		String pathname = "/etc/letsencrypt/live/remote.schunterkino.de";
+		String password = App.getConfigurationString("ssl_keystore_password");
+		String pathname = App.getConfigurationString("ssl_basepath");
 		try {
 			context = SSLContext.getInstance("TLS");
 
-			byte[] certBytes = parseDERFromPEM(getBytes(new File(pathname + File.separator + "cert.pem")),
+			byte[] certBytes = parseDERFromPEM(
+					getBytes(new File(pathname + File.separator + App.getConfigurationString("ssl_certificate_file"))),
 					"-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----");
-			byte[] keyBytes = parseDERFromPEM(getBytes(new File(pathname + File.separator + "privkey.pem")),
+			byte[] keyBytes = parseDERFromPEM(
+					getBytes(new File(pathname + File.separator + App.getConfigurationString("ssl_privatekey_file"))),
 					"-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----");
 
 			X509Certificate cert = generateCertificateFromDER(certBytes);
