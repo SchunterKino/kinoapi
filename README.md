@@ -17,3 +17,6 @@ To run the server:
 
 ## Websocket JSON interface
 The message format and available commands are documented [here](API.md).
+
+## Requirements
+The PIB uses hardware control flow on its serial port. When running this program on a Raspberry Pi, you need to [enable the respective pins](https://github.com/mholling/rpirtscts) on the RPI.

@@ -36,7 +36,7 @@ public class App {
 	// loaded
 	static {
 		properties = new Properties();
-		try (InputStream inputStream = Configuration.class.getResourceAsStream(CONFIGURATION_FILE)) {
+		try (InputStream inputStream = App.class.getResourceAsStream(CONFIGURATION_FILE)) {
 			properties.load(inputStream);
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to read file " + CONFIGURATION_FILE, e);
