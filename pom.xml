@@ -24,6 +24,11 @@
 			<artifactId>purejavacomm</artifactId>
 			<version>1.0.2.RELEASE</version>
 		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt</artifactId>
+			<version>0.8.0</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<resources>

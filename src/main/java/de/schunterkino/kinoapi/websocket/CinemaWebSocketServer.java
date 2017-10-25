@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.HttpCookie;
 import java.net.InetSocketAddress;
 import java.security.KeyFactory;
 import java.security.KeyStore;
@@ -19,6 +20,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.List;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -26,7 +28,11 @@ import javax.net.ssl.SSLContext;
 import javax.xml.bind.DatatypeConverter;
 
 import org.java_websocket.WebSocket;
+import org.java_websocket.drafts.Draft;
+import org.java_websocket.exceptions.InvalidDataException;
+import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
+import org.java_websocket.handshake.ServerHandshakeBuilder;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.java_websocket.server.WebSocketServer;
 
@@ -64,6 +70,7 @@ import de.schunterkino.kinoapi.websocket.messages.volume.InputModeChangedMessage
 import de.schunterkino.kinoapi.websocket.messages.volume.MuteStatusChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.PowerModeChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.VolumeChangedMessage;
+import io.jsonwebtoken.Jwts;
 
 /**
  * WebSocket server class which serves the documented JSON API. This class acts
@@ -76,6 +83,8 @@ import de.schunterkino.kinoapi.websocket.messages.volume.VolumeChangedMessage;
 public class CinemaWebSocketServer extends WebSocketServer
 		implements IDolbyStatusUpdateReceiver, IJniorStatusUpdateReceiver, IChristieStatusUpdateReceiver,
 		ISolariaSerialStatusUpdateReceiver, IServerSocketStatusUpdateReceiver {
+
+	public static final int AUTH_ERROR_CODE = 4401;
 
 	/**
 	 * Google JSON instance to convert Java objects into JSON objects.
@@ -175,6 +184,47 @@ public class CinemaWebSocketServer extends WebSocketServer
 		setConnectionLostTimeout(30);
 
 		super.start();
+	}
+
+	@Override
+	public ServerHandshakeBuilder onWebsocketHandshakeReceivedAsServer(WebSocket conn, Draft draft,
+			ClientHandshake request) throws InvalidDataException {
+
+		ServerHandshakeBuilder builder = super.onWebsocketHandshakeReceivedAsServer(conn, draft, request);
+
+		// Make sure this connection is authenticated.
+		validateToken(request);
+
+		return builder;
+	}
+
+	private void validateToken(ClientHandshake request) throws InvalidDataException {
+		if (!request.hasFieldValue("Cookie"))
+			throw new InvalidDataException(AUTH_ERROR_CODE, "Token missing.");
+
+		List<HttpCookie> cookie = HttpCookie.parse(request.getFieldValue("Cookie"));
+		// Malformed cookie.
+		if (cookie.size() != 1)
+			throw new InvalidDataException(CloseFrame.POLICY_VALIDATION, "Not accepted!");
+
+		HttpCookie tokenCookie = cookie.get(0);
+		// Invalid cookie name.
+		if (!tokenCookie.getName().equals("token"))
+			throw new InvalidDataException(CloseFrame.POLICY_VALIDATION, "Not accepted!");
+
+		String compactJws = tokenCookie.getValue();
+		// System.out.println("Token is " + compactJws);
+
+		// Validate the signature and the subject. The subject is just there
+		// because.
+		try {
+			Jwts.parser().requireSubject("SchunterKinoRemote")
+					.setSigningKey(App.getConfigurationString("jws_signature_key")).parseClaimsJws(compactJws);
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+			e.printStackTrace();
+			throw new InvalidDataException(AUTH_ERROR_CODE, "Invalid token.");
+		}
 	}
 
 	@Override
