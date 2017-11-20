@@ -93,6 +93,9 @@ public class SchunterServerSocket implements Runnable {
 	}
 
 	public void stopServer() {
+		if (stop)
+			return;
+
 		stop = true;
 		try {
 			if (isRunning())

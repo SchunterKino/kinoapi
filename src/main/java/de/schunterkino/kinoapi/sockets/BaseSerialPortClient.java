@@ -117,6 +117,9 @@ public class BaseSerialPortClient<T extends BaseCommands<S, V>, S, V> implements
 	}
 
 	public void stopServer() {
+		if (stop)
+			return;
+
 		stop = true;
 		if (commands != null)
 			commands.stop();

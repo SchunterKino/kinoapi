@@ -6,24 +6,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Properties;
 
-import de.schunterkino.kinoapi.audio.AudioPlayer;
-import de.schunterkino.kinoapi.christie.ChristieCommand;
-import de.schunterkino.kinoapi.christie.ChristieSocketCommands;
-import de.schunterkino.kinoapi.christie.IChristieStatusUpdateReceiver;
-import de.schunterkino.kinoapi.christie.serial.ISolariaSerialStatusUpdateReceiver;
-import de.schunterkino.kinoapi.christie.serial.SolariaCommand;
-import de.schunterkino.kinoapi.christie.serial.SolariaSocketCommands;
-import de.schunterkino.kinoapi.dolby.DolbyCommand;
-import de.schunterkino.kinoapi.dolby.DolbySocketCommands;
-import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
-import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
-import de.schunterkino.kinoapi.jnior.JniorCommand;
-import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
-import de.schunterkino.kinoapi.listen.SchunterServerSocket;
-import de.schunterkino.kinoapi.sockets.BaseSerialPortClient;
-import de.schunterkino.kinoapi.sockets.BaseSocketClient;
-import de.schunterkino.kinoapi.websocket.CinemaWebSocketServer;
-
 public class App {
 
 	// the configuration file is stored in the class path as a
@@ -45,43 +27,19 @@ public class App {
 
 	public static void main(String[] args) {
 
-		// Setup the Dolby CP750 connection.
-		BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolbyConnection = new BaseSocketClient<>(
-				getConfigurationString("dolby_ip"), getConfigurationInteger("dolby_port"), DolbySocketCommands.class);
-		Thread dolbyThread = new Thread(dolbyConnection);
-		dolbyThread.start();
+		final Main server = new Main();
 
-		// Setup the Integ Jnior 310 connection.
-		BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver, JniorCommand> jniorConnection = new BaseSocketClient<>(
-				getConfigurationString("jnior_ip"), getConfigurationInteger("jnior_port"), JniorSocketCommands.class);
-		Thread jniorThread = new Thread(jniorConnection);
-		jniorThread.start();
+		// Setup VM shutdown hook.
+		// Stop services gracefully on Ctrl+C or other signals.
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override
+			public void run() {
+				server.stop();
+			}
+		});
 
-		// Setup the Christie Projection connection.
-		BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver, ChristieCommand> christieConnection = new BaseSocketClient<>(
-				getConfigurationString("christie_imb_ip"), getConfigurationInteger("christie_imb_port"),
-				ChristieSocketCommands.class);
-		Thread christieThread = new Thread(christieConnection);
-		christieThread.start();
-
-		BaseSerialPortClient<SolariaSocketCommands, ISolariaSerialStatusUpdateReceiver, SolariaCommand> solariaConnection = new BaseSerialPortClient<>(
-				getConfigurationString("pib_serial_port"), SolariaSocketCommands.class);
-		Thread solariaThread = new Thread(solariaConnection);
-		solariaThread.start();
-
-		SchunterServerSocket serverSocket = new SchunterServerSocket(getConfigurationInteger("listen_port"));
-		Thread serverThread = new Thread(serverSocket);
-		serverThread.start();
-
-		// Create an audio player to play some nice tunes when the lamp is
-		// cooled off.
-		AudioPlayer audio = new AudioPlayer(dolbyConnection, solariaConnection, serverSocket);
-
-		// Start the websocket server now.
-		CinemaWebSocketServer websocketServer = new CinemaWebSocketServer(getConfigurationInteger("websocket_port"),
-				dolbyConnection, jniorConnection, christieConnection, solariaConnection, serverSocket);
-		websocketServer.start();
-		System.out.println("WebSocket: Server created on port: " + websocketServer.getPort());
+		// Start all services and try to connect to the hardware.
+		server.start();
 
 		// Keep the server running forever.
 		BufferedReader sysin = new BufferedReader(new InputStreamReader(System.in));
@@ -91,77 +49,16 @@ public class App {
 				// Stop it eventually if the user types one of the commands.
 				// readLine blocks.
 				String input = sysin.readLine();
-				if (input.equals("q") || input.equals("quit") || input.equals("exit"))
+				if (input == null || input.equals("q") || input.equals("quit") || input.equals("exit"))
 					break;
 			}
 		} catch (IOException e) {
 			// Ctrl+C anyone?
-			e.printStackTrace();
+			// e.printStackTrace();
 		} finally {
 
 			// Cleanup!
-			dolbyConnection.stopServer();
-			jniorConnection.stopServer();
-			christieConnection.stopServer();
-			solariaConnection.stopServer();
-			serverSocket.stopServer();
-
-			// Shutdown the servers.
-			try {
-				websocketServer.stop();
-			} catch (IOException | InterruptedException e) {
-				// We want to stop anyways. Errors are ok.
-			}
-			System.out.println("WebSocket: Server stopped.");
-
-			// Wait for the hardware connections to terminate.
-			try {
-				if (!dolbyConnection.isConnected())
-					dolbyThread.interrupt();
-				dolbyThread.join();
-			} catch (InterruptedException e) {
-				// We want to stop anyways. Errors are ok.
-			}
-			System.out.println("Dolby: Client stopped.");
-
-			try {
-				if (!jniorConnection.isConnected())
-					jniorThread.interrupt();
-				jniorThread.join();
-			} catch (InterruptedException e) {
-				// We want to stop anyways. Errors are ok.
-			}
-			System.out.println("Jnior: Client stopped.");
-
-			try {
-				if (!christieConnection.isConnected())
-					christieThread.interrupt();
-				christieThread.join();
-			} catch (InterruptedException e) {
-				// We want to stop anyways. Errors are ok.
-			}
-			System.out.println("Christie: Client stopped.");
-
-			try {
-				if (!solariaConnection.isConnected())
-					solariaThread.interrupt();
-				solariaThread.join();
-			} catch (InterruptedException e) {
-				// We want to stop anyways. Errors are ok.
-			}
-			System.out.println("Solaria: Client stopped.");
-
-			try {
-				if (!serverSocket.isRunning())
-					serverThread.interrupt();
-				serverThread.join();
-			} catch (InterruptedException e) {
-				// We want to stop anyways. Errors are ok.
-			}
-			System.out.println("ServerSocket: Server stopped.");
-
-			// Kill any running audio thread.
-			audio.stopSound();
+			server.stop();
 		}
 	}
 

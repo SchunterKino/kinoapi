@@ -108,6 +108,9 @@ public class BaseSocketClient<T extends BaseCommands<S, V>, S, V> implements Run
 	}
 
 	public void stopServer() {
+		if (stop)
+			return;
+		
 		stop = true;
 		if (commands != null)
 			commands.stop();
