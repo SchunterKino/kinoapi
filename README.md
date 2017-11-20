@@ -9,11 +9,14 @@ Talks to:
 ## Usage
 Use Maven 3 to build.
 
-To compile the tool run:
-`mvn clean compile`
+To compile the tool run: `mvn clean compile`
 
-To run the server:
-`mvn exec:java`
+To run the from source server: `mvn exec:java`
+
+To create a all-in-one jar archive which contains all dependencies: `mvn package`
+The package will be generated in `target/kinoapi-1.0.one-jar.jar`. 
+
+The package can be run like any jar with: `java -jar kinoapi-1.0.one-jar.jar`
 
 ## Websocket JSON interface
 The message format and available commands are documented [here](API.md).

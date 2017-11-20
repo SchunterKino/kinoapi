@@ -4,7 +4,7 @@
 	<groupId>de.schunterkino.kinoapi</groupId>
 	<artifactId>kinoapi</artifactId>
 	<packaging>jar</packaging>
-	<version>1.0-SNAPSHOT</version>
+	<version>1.0</version>
 	<name>kinoapi</name>
 	<url>http://www.schunterkino.de/</url>
 	<dependencies>
@@ -24,6 +24,11 @@
 			<artifactId>purejavacomm</artifactId>
 			<version>1.0.2.RELEASE</version>
 		</dependency>
+		<dependency>
+			<groupId>com.jolira</groupId>
+			<artifactId>onejar-maven-plugin</artifactId>
+			<version>1.4.4</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<resources>
@@ -32,6 +37,21 @@
 			</resource>
 		</resources>
 		<plugins>
+			<plugin>
+				<groupId>com.jolira</groupId>
+				<artifactId>onejar-maven-plugin</artifactId>
+				<version>1.4.4</version>
+				<executions>
+					<execution>
+						<configuration>
+							<mainClass>de.schunterkino.kinoapi.App</mainClass>
+						</configuration>
+						<goals>
+							<goal>one-jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
