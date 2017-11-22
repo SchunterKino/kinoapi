@@ -18,7 +18,6 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -120,8 +119,8 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 	/**
 	 * List of JSON protocol incoming command handlers. Incoming messages on the
-	 * WebSockets are passed to the handlers until one claims responsibility for
-	 * the packet.
+	 * WebSockets are passed to the handlers until one claims responsibility for the
+	 * packet.
 	 */
 	private LinkedList<IWebSocketMessageHandler> messageHandlers;
 
@@ -210,7 +209,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 					.parseClaimsJws(compactJws);
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
-			e.printStackTrace();
+			// e.printStackTrace();
 			throw new InvalidDataException(AUTH_ERROR_CODE, "Invalid token.");
 		}
 	}
@@ -218,7 +217,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 	@Override
 	public void onOpen(WebSocket conn, ClientHandshake handshake) {
 		System.out.println("WebSocket: " + prettySocket(conn) + " connected!");
-		
+
 		// Try to validate the token in the handshake cookie.
 		// Close the connection correctly if there's a problem.
 		try {
@@ -327,26 +326,6 @@ public class CinemaWebSocketServer extends WebSocketServer
 		System.out.println("Websocket server started!");
 	}
 
-	/**
-	 * Sends <var>text</var> to all currently connected WebSocket clients.
-	 * 
-	 * @param text
-	 *            The String to send across the network.
-	 * @throws InterruptedException
-	 *             When socket related I/O errors occur.
-	 */
-	public void sendToAll(String text) {
-		Collection<WebSocket> con = connections();
-		synchronized (con) {
-			for (WebSocket c : con) {
-				// Only send to fully connected websockets.
-				if (!c.isOpen())
-					continue;
-				c.send(text);
-			}
-		}
-	}
-
 	private static String prettySocket(WebSocket conn) {
 		return conn.getRemoteSocketAddress().getAddress().getHostAddress() + ":"
 				+ conn.getRemoteSocketAddress().getPort();
@@ -355,73 +334,73 @@ public class CinemaWebSocketServer extends WebSocketServer
 	@Override
 	public void onDolbyConnected() {
 		DolbyConnectionMessage msg = new DolbyConnectionMessage(true);
-		sendToAll(gson.toJson(msg));
+		broadcast(gson.toJson(msg));
 	}
 
 	@Override
 	public void onDolbyDisconnected() {
 		DolbyConnectionMessage msg = new DolbyConnectionMessage(false);
-		sendToAll(gson.toJson(msg));
+		broadcast(gson.toJson(msg));
 	}
 
 	@Override
 	public void onVolumeChanged(int volume) {
 		VolumeChangedMessage msg = new VolumeChangedMessage(volume);
-		sendToAll(gson.toJson(msg));
+		broadcast(gson.toJson(msg));
 	}
 
 	@Override
 	public void onMuteStatusChanged(boolean muted) {
 		MuteStatusChangedMessage msg = new MuteStatusChangedMessage(muted);
-		sendToAll(gson.toJson(msg));
+		broadcast(gson.toJson(msg));
 	}
 
 	@Override
 	public void onJniorConnected() {
 		LightsConnectionMessage msg = new LightsConnectionMessage(true);
-		sendToAll(gson.toJson(msg));
+		broadcast(gson.toJson(msg));
 	}
 
 	@Override
 	public void onJniorDisconnected() {
 		LightsConnectionMessage msg = new LightsConnectionMessage(false);
-		sendToAll(gson.toJson(msg));
+		broadcast(gson.toJson(msg));
 	}
 
 	@Override
 	public void onInputModeChanged(InputMode mode) {
 		InputModeChangedMessage msg = new InputModeChangedMessage(mode);
-		sendToAll(gson.toJson(msg));
+		broadcast(gson.toJson(msg));
 	}
 
 	@Override
 	public void onDecodeModeChanged(DecodeMode mode) {
 		DecodeModeChangedMessage msg = new DecodeModeChangedMessage(mode);
-		sendToAll(gson.toJson(msg));
+		broadcast(gson.toJson(msg));
 	}
 
 	@Override
 	public void onChristieConnected() {
 		ChristieConnectionMessage msg = new ChristieConnectionMessage(true);
-		sendToAll(gson.toJson(msg));
+		broadcast(gson.toJson(msg));
 	}
 
 	@Override
 	public void onChristieDisconnected() {
 		ChristieConnectionMessage msg = new ChristieConnectionMessage(false);
-		sendToAll(gson.toJson(msg));
+		broadcast(gson.toJson(msg));
 	}
 
 	@Override
 	public void onLampTurnedOff(Instant lampOffTime) {
 		LampOffMessage msg = new LampOffMessage(lampOffTime);
-		sendToAll(gson.toJson(msg));
+		broadcast(gson.toJson(msg));
 	}
 
 	@Override
 	public void onPowerModeChanged(PowerMode mode, PowerMode oldPowerMode, Instant timestamp, Integer cooldown) {
 		PowerModeChangedMessage msg = new PowerModeChangedMessage(mode, timestamp, cooldown);
-		sendToAll(gson.toJson(msg));
+		broadcast(gson.toJson(msg));
 	}
 
 	/*
@@ -456,7 +435,8 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 			context.init(km, null, null);
 		} catch (Exception e) {
-			System.err.printf("Error initializing SSL certificate. Websocket Server WON'T support SSL. Exception: %s%n", e.getMessage());
+			System.err.printf("Error initializing SSL certificate. Websocket Server WON'T support SSL. Exception: %s%n",
+					e.getMessage());
 			context = null;
 		}
 		return context;
