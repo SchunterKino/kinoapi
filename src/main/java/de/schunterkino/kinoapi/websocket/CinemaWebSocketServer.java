@@ -456,6 +456,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 			context.init(km, null, null);
 		} catch (Exception e) {
+			System.err.printf("Error initializing SSL certificate. Websocket Server WON'T support SSL. Exception: %s%n", e.getMessage());
 			context = null;
 		}
 		return context;
@@ -483,17 +484,12 @@ public class CinemaWebSocketServer extends WebSocketServer
 		return (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(certBytes));
 	}
 
-	private byte[] getBytes(File file) {
+	private byte[] getBytes(File file) throws IOException {
 		byte[] bytesArray = new byte[(int) file.length()];
 
-		FileInputStream fis = null;
-		try {
-			fis = new FileInputStream(file);
-			fis.read(bytesArray); // read file into bytes[]
-			fis.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		FileInputStream fis = new FileInputStream(file);
+		fis.read(bytesArray); // read file into bytes[]
+		fis.close();
 		return bytesArray;
 	}
 }

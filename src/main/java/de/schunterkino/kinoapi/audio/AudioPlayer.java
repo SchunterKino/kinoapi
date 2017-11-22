@@ -75,14 +75,14 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 		playThread = new Thread(new Runnable() {
 			@Override
 			public void run() {
-				try {
-					AudioInputStream audioStream = AudioSystem.getAudioInputStream(audioFile);
+				Clip audioClip = null;
+				try (AudioInputStream audioStream = AudioSystem.getAudioInputStream(audioFile)) {
 
 					AudioFormat format = audioStream.getFormat();
 
 					DataLine.Info info = new DataLine.Info(Clip.class, format);
 
-					Clip audioClip = (Clip) AudioSystem.getLine(info);
+					audioClip = (Clip) AudioSystem.getLine(info);
 
 					audioClip.addLineListener(AudioPlayer.this);
 
@@ -91,17 +91,10 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 					playCompleted = false;
 					audioClip.start();
 
-					try {
-						while (!playCompleted) {
-							// wait for the playback completes
-							Thread.sleep(500);
-						}
-					} catch (InterruptedException ex) {
-						ex.printStackTrace();
+					while (!playCompleted) {
+						// wait for the playback completes
+						Thread.sleep(500);
 					}
-
-					audioClip.close();
-					audioStream.close();
 
 				} catch (UnsupportedAudioFileException ex) {
 					System.out.println("The specified audio file is not supported.");
@@ -112,6 +105,11 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 				} catch (IOException ex) {
 					System.out.println("Error playing the audio file.");
 					ex.printStackTrace();
+				} catch (InterruptedException ex) {
+					ex.printStackTrace();
+				} finally {
+					if (audioClip != null)
+						audioClip.close();
 				}
 				playThread = null;
 			}
