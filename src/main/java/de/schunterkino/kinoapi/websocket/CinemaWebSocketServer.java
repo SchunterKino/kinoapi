@@ -28,11 +28,9 @@ import javax.net.ssl.SSLContext;
 import javax.xml.bind.DatatypeConverter;
 
 import org.java_websocket.WebSocket;
-import org.java_websocket.drafts.Draft;
 import org.java_websocket.exceptions.InvalidDataException;
 import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
-import org.java_websocket.handshake.ServerHandshakeBuilder;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.java_websocket.server.WebSocketServer;
 
@@ -186,18 +184,6 @@ public class CinemaWebSocketServer extends WebSocketServer
 		super.start();
 	}
 
-	@Override
-	public ServerHandshakeBuilder onWebsocketHandshakeReceivedAsServer(WebSocket conn, Draft draft,
-			ClientHandshake request) throws InvalidDataException {
-
-		ServerHandshakeBuilder builder = super.onWebsocketHandshakeReceivedAsServer(conn, draft, request);
-
-		// Make sure this connection is authenticated.
-		validateToken(request);
-
-		return builder;
-	}
-
 	private void validateToken(ClientHandshake request) throws InvalidDataException {
 		if (!request.hasFieldValue("Cookie"))
 			throw new InvalidDataException(AUTH_ERROR_CODE, "Token missing.");
@@ -230,6 +216,16 @@ public class CinemaWebSocketServer extends WebSocketServer
 	@Override
 	public void onOpen(WebSocket conn, ClientHandshake handshake) {
 		System.out.println("WebSocket: " + prettySocket(conn) + " connected!");
+		
+		// Try to validate the token in the handshake cookie.
+		// Close the connection correctly if there's a problem.
+		try {
+			validateToken(handshake);
+		} catch (InvalidDataException e) {
+			System.err.println("WebSocket: " + prettySocket(conn) + " failed to authenticate: " + e.getMessage());
+			conn.close(e.getCloseCode(), e.getMessage());
+			return;
+		}
 
 		// Inform the new client of the current status.
 
