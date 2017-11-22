@@ -11,7 +11,7 @@
 		<dependency>
 			<groupId>org.java-websocket</groupId>
 			<artifactId>Java-WebSocket</artifactId>
-			<version>1.3.4</version>
+			<version>1.3.6</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
@@ -23,6 +23,11 @@
 			<groupId>com.github.purejavacomm</groupId>
 			<artifactId>purejavacomm</artifactId>
 			<version>1.0.2.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt</artifactId>
+			<version>0.8.0</version>
 		</dependency>
 		<dependency>
 			<groupId>com.jolira</groupId>

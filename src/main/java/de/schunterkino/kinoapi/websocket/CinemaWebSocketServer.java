@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.HttpCookie;
 import java.net.InetSocketAddress;
 import java.security.KeyFactory;
 import java.security.KeyStore;
@@ -19,6 +20,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.List;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -26,6 +28,8 @@ import javax.net.ssl.SSLContext;
 import javax.xml.bind.DatatypeConverter;
 
 import org.java_websocket.WebSocket;
+import org.java_websocket.exceptions.InvalidDataException;
+import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.java_websocket.server.WebSocketServer;
@@ -64,6 +68,8 @@ import de.schunterkino.kinoapi.websocket.messages.volume.InputModeChangedMessage
 import de.schunterkino.kinoapi.websocket.messages.volume.MuteStatusChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.PowerModeChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.VolumeChangedMessage;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.impl.TextCodec;
 
 /**
  * WebSocket server class which serves the documented JSON API. This class acts
@@ -76,6 +82,8 @@ import de.schunterkino.kinoapi.websocket.messages.volume.VolumeChangedMessage;
 public class CinemaWebSocketServer extends WebSocketServer
 		implements IDolbyStatusUpdateReceiver, IJniorStatusUpdateReceiver, IChristieStatusUpdateReceiver,
 		ISolariaSerialStatusUpdateReceiver, IServerSocketStatusUpdateReceiver {
+
+	public static final int AUTH_ERROR_CODE = 4401;
 
 	/**
 	 * Google JSON instance to convert Java objects into JSON objects.
@@ -177,9 +185,49 @@ public class CinemaWebSocketServer extends WebSocketServer
 		super.start();
 	}
 
+	private void validateToken(ClientHandshake request) throws InvalidDataException {
+		if (!request.hasFieldValue("Cookie"))
+			throw new InvalidDataException(AUTH_ERROR_CODE, "Token missing.");
+
+		List<HttpCookie> cookie = HttpCookie.parse(request.getFieldValue("Cookie"));
+		// Malformed cookie.
+		if (cookie.size() != 1)
+			throw new InvalidDataException(CloseFrame.POLICY_VALIDATION, "Not accepted!");
+
+		HttpCookie tokenCookie = cookie.get(0);
+		// Invalid cookie name.
+		if (!tokenCookie.getName().equals("token"))
+			throw new InvalidDataException(CloseFrame.POLICY_VALIDATION, "Not accepted!");
+
+		String compactJws = tokenCookie.getValue();
+		// System.out.println("Token is " + compactJws);
+
+		// Validate the signature and the subject. The subject is just there
+		// because.
+		try {
+			Jwts.parser().requireSubject("SchunterKinoRemote")
+					.setSigningKey(TextCodec.BASE64.decode(App.getConfigurationString("jws_signature_key")))
+					.parseClaimsJws(compactJws);
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+			e.printStackTrace();
+			throw new InvalidDataException(AUTH_ERROR_CODE, "Invalid token.");
+		}
+	}
+
 	@Override
 	public void onOpen(WebSocket conn, ClientHandshake handshake) {
 		System.out.println("WebSocket: " + prettySocket(conn) + " connected!");
+		
+		// Try to validate the token in the handshake cookie.
+		// Close the connection correctly if there's a problem.
+		try {
+			validateToken(handshake);
+		} catch (InvalidDataException e) {
+			System.err.println("WebSocket: " + prettySocket(conn) + " failed to authenticate: " + e.getMessage());
+			conn.close(e.getCloseCode(), e.getMessage());
+			return;
+		}
 
 		// Inform the new client of the current status.
 
