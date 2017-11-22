@@ -69,6 +69,7 @@ import de.schunterkino.kinoapi.websocket.messages.volume.MuteStatusChangedMessag
 import de.schunterkino.kinoapi.websocket.messages.volume.PowerModeChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.VolumeChangedMessage;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.impl.TextCodec;
 
 /**
  * WebSocket server class which serves the documented JSON API. This class acts
@@ -205,7 +206,8 @@ public class CinemaWebSocketServer extends WebSocketServer
 		// because.
 		try {
 			Jwts.parser().requireSubject("SchunterKinoRemote")
-					.setSigningKey(App.getConfigurationString("jws_signature_key")).parseClaimsJws(compactJws);
+					.setSigningKey(TextCodec.BASE64.decode(App.getConfigurationString("jws_signature_key")))
+					.parseClaimsJws(compactJws);
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
 			e.printStackTrace();
