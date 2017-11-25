@@ -58,7 +58,7 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 	public void setSocket(Socket socket) {
 		this.socket = new LineWrapper(socket);
 	}
-	
+
 	public void setSerialPort(SerialPort serial) {
 		this.socket = new LineWrapper(serial);
 	}
@@ -144,6 +144,15 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 			if (!stop) {
 				System.err.printf("%s: Error in reader thread: %s%n", LOG_TAG, e.getMessage());
 				e.printStackTrace();
+			}
+
+			// Reset command so we don't wait for a response anymore.
+			// We can't be sure the endpoint even got our request.
+			// Don't run outdated commands either after we get a connection
+			// again later.
+			synchronized (commandQueue) {
+				commandQueue.clear();
+				currentCommand = noneCommand;
 			}
 		}
 
