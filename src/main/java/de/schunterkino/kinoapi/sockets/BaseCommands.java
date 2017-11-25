@@ -40,6 +40,10 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 	// Don't wait for responses.
 	private boolean ignoreResponses;
 
+	// Aggregate returned strings until our expected value is in there.
+	// This helps if we read from the socket faster than the server is sending data.
+	private String fullResponse;
+
 	protected BaseCommands() {
 		this.socket = null;
 		this.stop = false;
@@ -49,6 +53,7 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 		this.updateCommands = new HashMap<>();
 
 		this.ignoreResponses = false;
+		this.fullResponse = "";
 	}
 
 	public void stop() {
@@ -90,9 +95,15 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 						System.out.printf("%s: Current command: %s. Received: %s%n", LOG_TAG,
 								currentCommand.cmd.toString(), ret.trim());
 
+					// Add the last bit to the end.
+					fullResponse += ret;
+
 					// The command wasn't handled yet.
-					if (!onReceiveCommandOutput(ret))
+					if (!onReceiveCommandOutput(fullResponse))
 						continue;
+
+					// This command was handled now. Start scouting for the next output.
+					fullResponse = "";
 				}
 
 				// See if someone wanted to send some command.
@@ -154,6 +165,9 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 				commandQueue.clear();
 				currentCommand = noneCommand;
 			}
+
+			// Start fresh.
+			fullResponse = "";
 		}
 
 		onSocketDisconnected();
