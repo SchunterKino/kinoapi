@@ -328,6 +328,10 @@ public class CinemaWebSocketServer extends WebSocketServer
 	}
 
 	private static String prettySocket(WebSocket conn) {
+		// We can't get the IP if this socket isn't open anymore.
+		if (conn.getRemoteSocketAddress() == null)
+			return "unconnected(" + conn + ")";
+
 		return conn.getRemoteSocketAddress().getAddress().getHostAddress() + ":"
 				+ conn.getRemoteSocketAddress().getPort();
 	}
