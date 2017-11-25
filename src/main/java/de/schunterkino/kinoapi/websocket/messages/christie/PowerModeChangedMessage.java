@@ -1,4 +1,4 @@
-package de.schunterkino.kinoapi.websocket.messages.volume;
+package de.schunterkino.kinoapi.websocket.messages.christie;
 
 import java.time.Instant;
 
@@ -14,7 +14,11 @@ public class PowerModeChangedMessage extends BaseMessage {
 	public PowerModeChangedMessage(PowerMode mode, Instant modeChangeTime, Integer cooldown) {
 		super("playback", "power_mode_changed");
 		this.mode = mode.ordinal();
-		this.timestamp = modeChangeTime.toString();
+		// Only include this field if we have information to send.
+		if (modeChangeTime != null)
+			this.timestamp = modeChangeTime.toString();
+		else
+			this.timestamp = null;
 		this.cooldown_time = cooldown;
 	}
 }
