@@ -78,6 +78,8 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 			@Override
 			public void run() {
 				Clip audioClip = null;
+				playCompleted = false;
+
 				try (AudioInputStream audioStream = AudioSystem.getAudioInputStream(audioFile)) {
 
 					AudioFormat format = audioStream.getFormat();
@@ -90,7 +92,6 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 
 					audioClip.open(audioStream);
 
-					playCompleted = false;
 					audioClip.start();
 
 					while (!playCompleted) {
@@ -114,6 +115,10 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 						audioClip.close();
 				}
 				playThread = null;
+
+				// Make sure we're resetting the dolby state after us even on errors.
+				if (!playCompleted)
+					resetDolbyState();
 			}
 		});
 		playThread.start();
@@ -132,8 +137,7 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 		} else if (type == LineEvent.Type.STOP) {
 			playCompleted = true;
 			System.out.println("Playback completed.");
-			if (dolby.isConnected())
-				dolby.getCommands().setInputMode(oldInputMode);
+			resetDolbyState();
 		}
 
 	}
@@ -179,6 +183,7 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 		if (files == null) {
 			// Revert the dolby state to what it was before.
 			System.err.println("Failed to list files in sound directory: " + folder.getAbsolutePath());
+			resetDolbyState();
 			return;
 		}
 
@@ -219,6 +224,11 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 		// Switch to Non Sync - where we're connected to!
 		lampTurnedOff = true;
 		dolby.getCommands().setInputMode(InputMode.NonSync);
+	}
+	
+	private void resetDolbyState() {
+		if (dolby.isConnected())
+			dolby.getCommands().setInputMode(oldInputMode);
 	}
 
 	public void stopSound() {
