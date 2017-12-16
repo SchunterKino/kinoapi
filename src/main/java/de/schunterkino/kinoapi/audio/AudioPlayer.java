@@ -1,6 +1,7 @@
 package de.schunterkino.kinoapi.audio;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -15,6 +16,7 @@ import javax.sound.sampled.LineListener;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
+import de.schunterkino.kinoapi.App;
 import de.schunterkino.kinoapi.christie.serial.ISolariaSerialStatusUpdateReceiver;
 import de.schunterkino.kinoapi.christie.serial.PowerMode;
 import de.schunterkino.kinoapi.christie.serial.SolariaCommand;
@@ -161,9 +163,27 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 		// Play a nice sound, now that the lamp is cooled off.
 		lampTurnedOff = false;
 
-		// Play one of the 3 sounds randomly.
-		int yeahNum = rnd.nextInt(3);
-		play("sounds/yeah" + yeahNum + ".wav");
+		// See which sound to play from the directory.
+		File folder = new File(App.getConfigurationString("sounds_directory"));
+
+		// Filter out files only.
+		FileFilter filter = new FileFilter() {
+			@Override
+			public boolean accept(File pathname) {
+				return pathname.isFile();
+			}
+		};
+
+		// Get all files in the sounds directory.
+		File[] files = folder.listFiles(filter);
+		if (files == null) {
+			// Revert the dolby state to what it was before.
+			System.err.println("Failed to list files in sound directory: " + folder.getAbsolutePath());
+			return;
+		}
+
+		int soundNum = rnd.nextInt(files.length);
+		play(files[soundNum].getPath());
 	}
 
 	@Override
