@@ -43,19 +43,19 @@ public class DolbySocketCommands extends BaseCommands<IDolbyStatusUpdateReceiver
 	public DolbySocketCommands() {
 		super();
 
-		this.faderPattern = Pattern.compile("cp750\\.sys\\.fader (\\d+)");
+		this.faderPattern = Pattern.compile("cp750\\.sys\\.fader (\\d+)\n");
 		this.volume = -1;
 		watchCommand(DolbyCommand.GetVolume);
 
-		this.mutePattern = Pattern.compile("cp750\\.sys\\.mute (\\d+)");
+		this.mutePattern = Pattern.compile("cp750\\.sys\\.mute (\\d+)\n");
 		this.muted = false;
 		watchCommand(DolbyCommand.GetMuteStatus);
 
-		this.inputModePattern = Pattern.compile("cp750\\.sys\\.input_mode ([a-zA-Z0-9_]+)");
+		this.inputModePattern = Pattern.compile("cp750\\.sys\\.input_mode ([a-zA-Z0-9_]+)\n");
 		this.inputMode = InputMode.Digital_1;
 		watchCommand(DolbyCommand.GetInputMode);
 
-		this.decodeModePattern = Pattern.compile("cp750\\.sys\\.pcm_2_channel_decode_mode_1 ([a-zA-Z0-9_]+)");
+		this.decodeModePattern = Pattern.compile("cp750\\.sys\\.pcm_2_channel_decode_mode_1 ([a-zA-Z0-9_]+)\n");
 		this.decodeMode = DecodeMode.Auto;
 		watchCommand(DolbyCommand.GetDecodeMode);
 	}
