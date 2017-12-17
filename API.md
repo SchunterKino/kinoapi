@@ -152,6 +152,11 @@ Stops playing the currently loaded content.
  * `msg_type` - string: `playback`
  * `action` - string: `stop`
 
+#### Shut down the IMB
+Power off the IMB. This will start cooling the lamp too if it was on.
+ * `msg_type` - string: `playback`
+ * `action` - string: `power_off`
+
 #### Turn lamp on
 Turn on the lamp.
  * `msg_type` - string: `playback`

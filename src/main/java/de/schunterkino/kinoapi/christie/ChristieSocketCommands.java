@@ -60,6 +60,9 @@ public class ChristieSocketCommands extends BaseCommands<IChristieStatusUpdateRe
 		case Stop:
 			command = "Stop";
 			break;
+		case PowerOff:
+			command = "PowerOff";
+			break;
 		case LampOn:
 			command = "LampOn";
 			break;
@@ -117,6 +120,12 @@ public class ChristieSocketCommands extends BaseCommands<IChristieStatusUpdateRe
 				addCommand(ChristieCommand.Stop);
 			else
 				throw new WebSocketCommandException("Failed to stop content. No connection to Christie projector.");
+			return true;
+		case "power_off":
+			if (socket.isConnected())
+				addCommand(ChristieCommand.PowerOff);
+			else
+				throw new WebSocketCommandException("Failed to power off the IMB. No connection to Christie projector.");
 			return true;
 		case "lamp_on":
 			if (socket.isConnected())

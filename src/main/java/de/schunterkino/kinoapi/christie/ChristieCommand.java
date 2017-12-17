@@ -1,5 +1,5 @@
 package de.schunterkino.kinoapi.christie;
 
 public enum ChristieCommand {
-	Play, Pause, Stop, LampOn, LampOff, DouserOpen, DouserClose, FormatCinemaFlat, FormatCinemaScope, FormatPCFlat, FormatPCScope, KeepAlive
+	Play, Pause, Stop, PowerOff, LampOn, LampOff, DouserOpen, DouserClose, FormatCinemaFlat, FormatCinemaScope, FormatPCFlat, FormatPCScope, KeepAlive
 }
