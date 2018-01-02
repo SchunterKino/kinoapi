@@ -19,7 +19,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 
 	// Power mode
 	// This list must match the PowerMode enum.
-	private static final List<String> powerModeNames = Arrays.asList("0", "1", "2", "3", "10", "11");
+	private static final List<Integer> powerModeNames = Arrays.asList(0, 1, 2, 3, 10, 11);
 	private Pattern powerModePattern;
 	private PowerMode oldPowerMode;
 	private PowerMode powerMode;
@@ -32,11 +32,10 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 	public SolariaSocketCommands() {
 		super();
 
-		// TODO: Insert right pattern.
-		powerModePattern = Pattern.compile("");
+		powerModePattern = Pattern.compile("\\(PWR!([0-9]+) \"([^\"]*)\"\\)");
 		powerMode = oldPowerMode = PowerMode.PowerOff;
 
-		cooldownPattern = Pattern.compile("");
+		cooldownPattern = Pattern.compile("\\(PWR\\+COOL!([0-9]+)\\)");
 		cooldownTime = null;
 		powerModeChangedTimestamp = null;
 
@@ -61,13 +60,14 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			matcher = powerModePattern.matcher(input);
 			// Wait until we get the desired response.
 			while (matcher.find()) {
-				String powerMode = matcher.group(1);
-				if (powerMode != null) {
+				String powerModeMatch = matcher.group(1);
+				if (powerModeMatch != null) {
+					int powerMode = Integer.parseInt(powerModeMatch);
 					int ordPowerMode = powerModeNames.indexOf(powerMode);
 					if (ordPowerMode != -1) {
 						updatePowerMode(PowerMode.values()[ordPowerMode]);
 					} else {
-						System.err.printf("%s: Received invalid power mode: %s%n", LOG_TAG, powerMode);
+						System.err.printf("%s: Received invalid power mode: %s \"%s\"%n", LOG_TAG, powerModeMatch, matcher.group(2));
 					}
 					handled = true;
 				}
@@ -131,8 +131,8 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		// The cooldown mode is special in that we ask for the remaining
 		// cooldown time first.
 		// Inform the listeners after we got the time it's still cooling.
-		if (powerMode == PowerMode.CoolDown) {
-			if (oldPowerMode != PowerMode.CoolDown)
+		if (powerMode == PowerMode.InCoolDown) {
+			if (oldPowerMode != PowerMode.InCoolDown)
 				addCommand(SolariaCommand.GetCooldownTimer);
 		} else {
 			// Reset cooldown time now that it's irrelevant.
@@ -152,10 +152,10 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		String command = null;
 		switch (cmd.cmd) {
 		case GetPowerStatus:
-			command = "PWR+STAT?";
+			command = "(PWR?)";
 			break;
 		case GetCooldownTimer:
-			command = "PWR+COOL?";
+			command = "(PWR+COOL?)";
 			break;
 		}
 		return command;

@@ -203,7 +203,7 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 	@Override
 	public void onPowerModeChanged(PowerMode mode, PowerMode oldMode, Instant timestamp, Integer cooldown) {
 		// Play a sound when the mode changes from cooling to something else.
-		if (oldMode == PowerMode.CoolDown)
+		if (oldMode == PowerMode.InCoolDown)
 			preparePlayingSound();
 	}
 
