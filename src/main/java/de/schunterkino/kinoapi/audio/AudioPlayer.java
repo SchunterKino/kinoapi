@@ -43,7 +43,7 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 
 	private BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolby;
 
-	private boolean lampTurnedOff;
+	private boolean switchingInputMode;
 	private InputMode oldInputMode;
 	private Thread playThread = null;
 	private SecureRandom rnd;
@@ -161,11 +161,11 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 	@Override
 	public void onInputModeChanged(InputMode mode) {
 		// We didn't change the input mode ourselves. Don't care.
-		if (!lampTurnedOff)
+		if (!switchingInputMode)
 			return;
 
 		// Play a nice sound, now that the lamp is cooled off.
-		lampTurnedOff = false;
+		switchingInputMode = false;
 
 		// See which sound to play from the directory.
 		File folder = new File(App.getConfigurationString("sounds_directory"));
@@ -213,7 +213,7 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 			return;
 
 		// Can't process this too fast again.
-		if (lampTurnedOff)
+		if (switchingInputMode || playThread != null)
 			return;
 
 		// Save current input source of audio.
@@ -222,7 +222,7 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 		// TODO: Turn volume down?
 
 		// Switch to Non Sync - where we're connected to!
-		lampTurnedOff = true;
+		switchingInputMode = true;
 		dolby.getCommands().setInputMode(InputMode.NonSync);
 	}
 	
