@@ -30,6 +30,9 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 
 	private Instant powerModeChangedTimestamp;
 
+	private Pattern douserStatePattern;
+	private boolean douserOpen;
+
 	public SolariaSocketCommands() {
 		super();
 
@@ -40,7 +43,11 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		cooldownTime = null;
 		powerModeChangedTimestamp = null;
 
+		douserStatePattern = Pattern.compile("\\(SHU!([0-9]+)\\)");
+		douserOpen = false;
+
 		watchCommand(SolariaCommand.GetPowerStatus);
+		watchCommand(SolariaCommand.GetDouserState);
 	}
 
 	@Override
@@ -87,6 +94,18 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 				}
 			}
 			break;
+		case GetDouserState:
+			// Parse the response
+			matcher = douserStatePattern.matcher(input);
+			// Wait until we get the desired response.
+			while (matcher.find()) {
+				String state = matcher.group(1);
+				if (state != null) {
+					updateDouserState(Integer.parseInt(state) == 0);
+					handled = true;
+				}
+			}
+			break;
 		default:
 			handled = true;
 			break;
@@ -104,6 +123,10 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 
 	public Integer getCooldownTime() {
 		return cooldownTime;
+	}
+
+	public boolean isDouserOpen() {
+		return douserOpen;
 	}
 
 	private void updateCooldownTimer(int cooldown) {
@@ -149,6 +172,21 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		}
 	}
 
+	private void updateDouserState(boolean isopen) {
+		// Don't inform if the status didn't change.
+		if (douserOpen == isopen)
+			return;
+
+		douserOpen = isopen;
+
+		// Notify listeners.
+		synchronized (listeners) {
+			for (ISolariaSerialStatusUpdateReceiver listener : listeners) {
+				listener.onDouserStateChanged(douserOpen);
+			}
+		}
+	}
+
 	@Override
 	protected String getCommandString(CommandContainer<SolariaCommand> cmd) {
 		String command = null;
@@ -161,6 +199,12 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			break;
 		case SetPowerStatus:
 			command = "(PWR" + cmd.value + ")";
+			break;
+		case GetDouserState:
+			command = "(SHU?)";
+			break;
+		case SetDouserState:
+			command = "(SHU " + cmd.value + ")";
 			break;
 		}
 		return command;
@@ -189,8 +233,21 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 				throw new WebSocketCommandException(
 						"Failed to change power mode. No connection to Christie projector intelligence board.");
 			return true;
+		case "douser_open":
+			if (socket.isConnected())
+				addCommand(SolariaCommand.SetDouserState, 0, UseResponse.IgnoreResponse);
+			else
+				throw new WebSocketCommandException(
+						"Failed to open the douser. No connection to Christie projector intelligence board.");
+			return true;
+		case "douser_close":
+			if (socket.isConnected())
+				addCommand(SolariaCommand.SetDouserState, 1, UseResponse.IgnoreResponse);
+			else
+				throw new WebSocketCommandException(
+						"Failed to close the douser. No connection to Christie projector intelligence board.");
+			return true;
 		}
 		return false;
 	}
-
 }

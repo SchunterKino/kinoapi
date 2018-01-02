@@ -59,6 +59,7 @@ import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.ChristieConnectionMessage;
+import de.schunterkino.kinoapi.websocket.messages.christie.DouserChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.LampOffMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.PowerModeChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.jnior.LightsConnectionMessage;
@@ -257,6 +258,8 @@ public class CinemaWebSocketServer extends WebSocketServer
 		if (solaria.isConnected()) {
 			conn.send(gson.toJson(new PowerModeChangedMessage(solaria.getCommands().getPowerMode(),
 					solaria.getCommands().getPowerModeChangedTimestamp(), solaria.getCommands().getCooldownTime())));
+
+			conn.send(gson.toJson(new DouserChangedMessage(solaria.getCommands().isDouserOpen())));
 		}
 	}
 
@@ -405,6 +408,12 @@ public class CinemaWebSocketServer extends WebSocketServer
 	@Override
 	public void onPowerModeChanged(PowerMode mode, PowerMode oldPowerMode, Instant timestamp, Integer cooldown) {
 		PowerModeChangedMessage msg = new PowerModeChangedMessage(mode, timestamp, cooldown);
+		broadcast(gson.toJson(msg));
+	}
+
+	@Override
+	public void onDouserStateChanged(boolean isopen) {
+		DouserChangedMessage msg = new DouserChangedMessage(isopen);
 		broadcast(gson.toJson(msg));
 	}
 

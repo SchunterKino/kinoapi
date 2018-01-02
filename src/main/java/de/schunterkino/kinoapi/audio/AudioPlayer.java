@@ -242,4 +242,8 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 			playThread = null;
 		}
 	}
+
+	@Override
+	public void onDouserStateChanged(boolean isopen) {
+	}
 }

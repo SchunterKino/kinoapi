@@ -10,6 +10,7 @@ When a websocket connection to the server on port 8641 is opened the server send
  * `lights_connection` - Indicate if the Jnior connection for light regulation is available.
  * `projector_connection` - Indicate if the Christie IMB connection for projector control is available.
  * `power_mode_changed` - The current status of the projector.
+ * `douser_changed` - Current open state of the douser.
 
 ## Message format
 Every message is encoded as a JSON object containing at least a `msg_type` and an `action` string attribute.
@@ -87,6 +88,12 @@ Sent when the power status of the projector changed like starting the IMB, lamp 
    * `5`: Warm up. This is the intermediate stage between standby and full power mode.
  * `timestamp` - string: ISO 8601 formated point in time of when the power mode change was observed.
  * `cooldown_time` - int: The time the lamp still had to be cooled when the power mode changed to cooling in seconds.
+
+#### Douser opened or closed
+Sent when the douser was opened or closed.
+ * `msg_type` - string: `playback`
+ * `action` - string: `douser_changed`
+ * `isopen` - boolean: True if the douser is open now, false if it's closed.
 
 ## Client -> Server
 ### Dolby CP750 Audio
