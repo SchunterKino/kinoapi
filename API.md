@@ -186,3 +186,14 @@ Select the input source to display the image from including the screen ratio.
    * `cinema_scope` - IMB image in scope ratio.
    * `pc_flat` - Computer image in flat ratio.
    * `pc_scope` - Computer image in scope ratio.
+
+### Christie Solaria PIB
+#### Change power state
+Change the power state of the projector. Turn it on or off. This might start cooling the lamp too if it was on.
+ * `msg_type` - string: `playback`
+ * `action` - string: `set_power_mode`
+ * `mode` - int: From the serial API documentation:
+   * `0`: Full power mode. The projector is ready for lamp on.
+   * `1`: Power on. The projector is turned on and the lamp is on.
+   * `2`: Christie IMB standby mode.
+   * `3`: Power off or standby mode. All electronics except the Projector Control Module (PCM) turn off.

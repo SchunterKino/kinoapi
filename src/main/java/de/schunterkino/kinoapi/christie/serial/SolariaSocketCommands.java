@@ -12,6 +12,7 @@ import de.schunterkino.kinoapi.sockets.BaseCommands;
 import de.schunterkino.kinoapi.sockets.CommandContainer;
 import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
+import de.schunterkino.kinoapi.websocket.messages.christie.SetPowerModeMessage;
 
 public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpdateReceiver, SolariaCommand> {
 
@@ -67,7 +68,8 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 					if (ordPowerMode != -1) {
 						updatePowerMode(PowerMode.values()[ordPowerMode]);
 					} else {
-						System.err.printf("%s: Received invalid power mode: %s \"%s\"%n", LOG_TAG, powerModeMatch, matcher.group(2));
+						System.err.printf("%s: Received invalid power mode: %s \"%s\"%n", LOG_TAG, powerModeMatch,
+								matcher.group(2));
 					}
 					handled = true;
 				}
@@ -157,6 +159,9 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		case GetCooldownTimer:
 			command = "(PWR+COOL?)";
 			break;
+		case SetPowerStatus:
+			command = "(PWR" + cmd.value + ")";
+			break;
 		}
 		return command;
 	}
@@ -165,6 +170,26 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 	public boolean onMessage(BaseMessage baseMsg, String message)
 			throws WebSocketCommandException, JsonSyntaxException {
 
+		// Handle all IMB playback related commands.
+		if (!"playback".equals(baseMsg.getMessageType()))
+			return false;
+
+		switch (baseMsg.getAction()) {
+		case "set_power_mode":
+			if (socket.isConnected()) {
+				SetPowerModeMessage setPowerModeMsg = gson.fromJson(message, SetPowerModeMessage.class);
+				int powerMode = setPowerModeMsg.getPowerMode();
+				if (powerMode < 0 || powerMode > PowerMode.PowerOff.ordinal())
+					throw new WebSocketCommandException("Invalid projector power mode: " + powerMode);
+
+				// No feedback from the projector here. Don't wait for something :(
+				addCommand(SolariaCommand.SetPowerStatus, powerMode, UseResponse.IgnoreResponse);
+				addCommand(SolariaCommand.GetPowerStatus);
+			} else
+				throw new WebSocketCommandException(
+						"Failed to change power mode. No connection to Christie projector intelligence board.");
+			return true;
+		}
 		return false;
 	}
 

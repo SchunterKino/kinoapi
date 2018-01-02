@@ -1,5 +1,5 @@
 package de.schunterkino.kinoapi.christie.serial;
 
 public enum SolariaCommand {
-	GetPowerStatus, GetCooldownTimer
+	GetPowerStatus, GetCooldownTimer, SetPowerStatus
 }

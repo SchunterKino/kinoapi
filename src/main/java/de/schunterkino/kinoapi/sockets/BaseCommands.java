@@ -43,6 +43,12 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 	// Aggregate returned strings until our expected value is in there.
 	// This helps if we read from the socket faster than the server is sending data.
 	private String fullResponse;
+	
+	// Readable way to add a command and specify if we're interested in the response.
+	protected enum UseResponse {
+		WaitForResponse,
+		IgnoreResponse
+	}
 
 	protected BaseCommands() {
 		this.socket = null;
@@ -83,7 +89,7 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 			do {
 				// We're waiting on a response for that command. See if there's
 				// something here.
-				if (currentCommand.cmd != null && !ignoreResponses) {
+				if (currentCommand.cmd != null && !currentCommand.ignoreResponse && !ignoreResponses) {
 					String ret = read();
 					// Nothing yet. Keep waiting.
 					if (ret == null)
@@ -203,7 +209,7 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 		return currentCommand;
 	}
 
-	protected void addCommand(CommandEnum cmd, int value) {
+	protected void addCommand(CommandEnum cmd, int value, UseResponse response) {
 		synchronized (commandQueue) {
 			// Make sure this is the only command of that type in the queue.
 			Iterator<CommandContainer<CommandEnum>> i = commandQueue.iterator();
@@ -214,8 +220,12 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 			}
 
 			// Add the new command now.
-			commandQueue.add(new CommandContainer<>(cmd, value));
+			commandQueue.add(new CommandContainer<>(cmd, value, response == UseResponse.IgnoreResponse));
 		}
+	}
+	
+	protected void addCommand(CommandEnum cmd, int value) {
+		addCommand(cmd, value, UseResponse.WaitForResponse);
 	}
 
 	protected void addCommand(CommandEnum cmd) {
