@@ -12,7 +12,6 @@ import de.schunterkino.kinoapi.sockets.BaseCommands;
 import de.schunterkino.kinoapi.sockets.CommandContainer;
 import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
-import de.schunterkino.kinoapi.websocket.messages.christie.SetPowerModeMessage;
 
 public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpdateReceiver, SolariaCommand> {
 
@@ -25,11 +24,16 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 	private PowerMode oldPowerMode;
 	private PowerMode powerMode;
 
+	// Get how long the lamp still needs to be cooled.
 	private Pattern cooldownPattern;
 	private Integer cooldownTime;
 
+	// Remember when we noticed the change in the power mode.
+	// That way we can calculate the remaining lamp cool down
+	// time for clients connecting late.
 	private Instant powerModeChangedTimestamp;
 
+	// Cache if the douser is currently open.
 	private Pattern douserStatePattern;
 	private boolean douserOpen;
 
@@ -219,20 +223,6 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			return false;
 
 		switch (baseMsg.getAction()) {
-		case "set_power_mode":
-			if (socket.isConnected()) {
-				SetPowerModeMessage setPowerModeMsg = gson.fromJson(message, SetPowerModeMessage.class);
-				int powerMode = setPowerModeMsg.getPowerMode();
-				if (powerMode < 0 || powerMode > PowerMode.PowerOff.ordinal())
-					throw new WebSocketCommandException("Invalid projector power mode: " + powerMode);
-
-				// No feedback from the projector here. Don't wait for something :(
-				addCommand(SolariaCommand.SetPowerStatus, powerMode, UseResponse.IgnoreResponse);
-				addCommand(SolariaCommand.GetPowerStatus);
-			} else
-				throw new WebSocketCommandException(
-						"Failed to change power mode. No connection to Christie projector intelligence board.");
-			return true;
 		case "douser_open":
 			if (socket.isConnected())
 				addCommand(SolariaCommand.SetDouserState, 0, UseResponse.IgnoreResponse);
@@ -247,7 +237,44 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 				throw new WebSocketCommandException(
 						"Failed to close the douser. No connection to Christie projector intelligence board.");
 			return true;
+		case "lamp_on":
+			if (socket.isConnected()) {
+				addCommand(SolariaCommand.SetPowerStatus, PowerMode.LampOn.ordinal(), UseResponse.IgnoreResponse);
+				addCommand(SolariaCommand.GetPowerStatus);
+			}
+			else
+				throw new WebSocketCommandException("Failed to turn lamp on. No connection to Christie projector.");
+			return true;
+		case "lamp_off":
+			if (socket.isConnected()) {
+				addCommand(SolariaCommand.SetPowerStatus, PowerMode.LampOff.ordinal(), UseResponse.IgnoreResponse);
+				addCommand(SolariaCommand.GetPowerStatus);
+			}
+			else
+				throw new WebSocketCommandException("Failed to turn lamp off. No connection to Christie projector.");
+			return true;
+		case "power_off":
+			if (socket.isConnected()) {
+				addCommand(SolariaCommand.SetPowerStatus, PowerMode.PowerOff.ordinal(), UseResponse.IgnoreResponse);
+				addCommand(SolariaCommand.GetPowerStatus);
+			}
+			else
+				throw new WebSocketCommandException("Failed to power off the IMB. No connection to Christie projector.");
+			return true;
+		case "power_on":
+			if (socket.isConnected()) {
+				// Make sure we actually turn the IMB on and not the lamp off.
+				if (getPowerMode() != PowerMode.PowerOff)
+					throw new WebSocketCommandException("The IMB is already on.");
+				
+				addCommand(SolariaCommand.SetPowerStatus, PowerMode.LampOff.ordinal(), UseResponse.IgnoreResponse);
+				addCommand(SolariaCommand.GetPowerStatus);
+			}
+			else
+				throw new WebSocketCommandException("Failed to power on the IMB. No connection to Christie projector.");
+			return true;
 		}
+		
 		return false;
 	}
 }

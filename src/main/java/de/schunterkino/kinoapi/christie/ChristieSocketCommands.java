@@ -60,21 +60,6 @@ public class ChristieSocketCommands extends BaseCommands<IChristieStatusUpdateRe
 		case Stop:
 			command = "Stop";
 			break;
-		case PowerOff:
-			command = "PowerOff";
-			break;
-		case LampOn:
-			command = "LampOn";
-			break;
-		case LampOff:
-			command = "LampOff";
-			break;
-		case DouserOpen:
-			command = "DouserOpen";
-			break;
-		case DouserClose:
-			command = "DouserClose";
-			break;
 		case FormatCinemaFlat:
 			command = "CinemaFlat";
 			break;
@@ -120,36 +105,6 @@ public class ChristieSocketCommands extends BaseCommands<IChristieStatusUpdateRe
 				addCommand(ChristieCommand.Stop);
 			else
 				throw new WebSocketCommandException("Failed to stop content. No connection to Christie projector.");
-			return true;
-		case "power_off":
-			if (socket.isConnected())
-				addCommand(ChristieCommand.PowerOff);
-			else
-				throw new WebSocketCommandException("Failed to power off the IMB. No connection to Christie projector.");
-			return true;
-		case "lamp_on":
-			if (socket.isConnected())
-				addCommand(ChristieCommand.LampOn);
-			else
-				throw new WebSocketCommandException("Failed to turn lamp on. No connection to Christie projector.");
-			return true;
-		case "lamp_off":
-			if (socket.isConnected())
-				addCommand(ChristieCommand.LampOff);
-			else
-				throw new WebSocketCommandException("Failed to turn lamp off. No connection to Christie projector.");
-			return true;
-		case "douser_open":
-			if (socket.isConnected())
-				addCommand(ChristieCommand.DouserOpen);
-			else
-				throw new WebSocketCommandException("Failed to open the douser. No connection to Christie projector.");
-			return true;
-		case "douser_close":
-			if (socket.isConnected())
-				addCommand(ChristieCommand.DouserClose);
-			else
-				throw new WebSocketCommandException("Failed to close the douser. No connection to Christie projector.");
 			return true;
 		case "set_input_mode":
 			if (socket.isConnected()) {
