@@ -57,7 +57,7 @@ import de.schunterkino.kinoapi.sockets.BaseSerialPortClient;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
-import de.schunterkino.kinoapi.websocket.messages.christie.ChristieConnectionMessage;
+import de.schunterkino.kinoapi.websocket.messages.christie.IMBConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.DouserChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.LampOffMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.PowerModeChangedMessage;
@@ -216,7 +216,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 					.setSigningKey(TextCodec.BASE64.decode(App.getConfigurationString("jws_signature_key")))
 					.parseClaimsJws(compactJws);
 		} catch (ExpiredJwtException e) {
-			System.err.println(e.getMessage());
+			System.err.println("Expired! " + e.getMessage());
 			// e.printStackTrace();
 			throw new InvalidDataException(AUTH_TOKEN_EXPIRED_ERROR_CODE, "Token expired.");
 		} catch (Exception e) {
@@ -257,7 +257,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 		conn.send(gson.toJson(new LightsConnectionMessage(jnior.isConnected())));
 
 		// And if the projector is up.
-		conn.send(gson.toJson(new ChristieConnectionMessage(christie.isConnected())));
+		conn.send(gson.toJson(new IMBConnectionMessage(christie.isConnected())));
 		if (christie.isConnected()) {
 			Instant lampOffTime = server.getLampOffTime();
 			// Only send the lamp off time if it's been max. 2 hours ago.
@@ -400,13 +400,13 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 	@Override
 	public void onChristieConnected() {
-		ChristieConnectionMessage msg = new ChristieConnectionMessage(true);
+		IMBConnectionMessage msg = new IMBConnectionMessage(true);
 		broadcast(gson.toJson(msg));
 	}
 
 	@Override
 	public void onChristieDisconnected() {
-		ChristieConnectionMessage msg = new ChristieConnectionMessage(false);
+		IMBConnectionMessage msg = new IMBConnectionMessage(false);
 		broadcast(gson.toJson(msg));
 	}
 

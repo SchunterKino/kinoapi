@@ -6,7 +6,7 @@ public class LightsConnectionMessage extends BaseMessage {
 	public boolean connected;
 
 	public LightsConnectionMessage(boolean connected) {
-		super("lights", "lights_connection");
+		super("lights", "connection");
 		this.connected = connected;
 	}
 }

@@ -6,7 +6,7 @@ public class DolbyConnectionMessage extends BaseMessage {
 	public boolean connected;
 
 	public DolbyConnectionMessage(boolean connected) {
-		super("volume", "dolby_connection");
+		super("volume", "connection");
 		this.connected = connected;
 	}
 }
