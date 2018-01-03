@@ -43,6 +43,7 @@ public class BaseSocketClient<T extends BaseCommands<S, V>, S, V> implements Run
 				try {
 					socket = new Socket();
 					socket.connect(socketAddress, 5000);
+					socket.setKeepAlive(true);
 					socket.setSoTimeout(5000);
 
 					// Start a thread to handle telnet messages.

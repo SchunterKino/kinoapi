@@ -84,6 +84,11 @@ public class CinemaWebSocketServer extends WebSocketServer
 		ISolariaSerialStatusUpdateReceiver, IServerSocketStatusUpdateReceiver {
 
 	public static final int AUTH_ERROR_CODE = 4401;
+	
+	// The number of threads that will be used to process the incoming network data.
+	// By default this will be Runtime.getRuntime().availableProcessors() which is
+	// 1 on a raspberry pi.
+	public static final int DECODER_POOL_SIZE = 4;
 
 	/**
 	 * Google JSON instance to convert Java objects into JSON objects.
@@ -141,7 +146,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 			BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver, ChristieCommand> christie,
 			BaseSerialPortClient<SolariaSocketCommands, ISolariaSerialStatusUpdateReceiver, SolariaCommand> solaria,
 			SchunterServerSocket server) {
-		super(new InetSocketAddress(port));
+		super(new InetSocketAddress(port), DECODER_POOL_SIZE);
 
 		this.gson = new Gson();
 		this.messageHandlers = new LinkedList<>();
