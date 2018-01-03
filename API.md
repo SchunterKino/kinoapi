@@ -75,25 +75,32 @@ Sent when the Christie Projector for playback control gets connected or disconne
  * `connected` - boolean: `true` if connection to Christie IMB-S2 is available, `false` otherwise.
 
 ### Christie Solaria PIB
-#### Power status changed
-Sent when the power status of the projector changed like starting the IMB, lamp on/off/cooling, etc.
- * `msg_type` - string: `playback`
- * `action` - string: `power_mode_changed`
- * `mode` - int: From the serial API documentation:
-   * `0`: Full power mode. The projector is ready for lamp on.
-   * `1`: Power on. The projector is turned on and the lamp is on.
-   * `2`: Christie IMB standby mode.
-   * `3`: Power off or standby mode. All electronics except the Projector Control Module (PCM) turn off.
-   * `4`: Cool down. The projector stays in cooling mode for X minutes after the lamp is turned off.
-   * `5`: Warm up. This is the intermediate stage between standby and full power mode.
- * `timestamp` - string: ISO 8601 formated point in time of when the power mode change was observed.
- * `cooldown_time` - int: The time the lamp still had to be cooled when the power mode changed to cooling in seconds.
+#### IMB power state changed
+Sent when the IMB turned on or off.
+The `timestamp` field might be missing if we never got any information from the projector since the app started.
+ * `msg_type` - string: `projector`
+ * `action` - string: `power_changed`
+ * `state` - int: The state of the IMB encoded as:
+   * `0` - IMB is off.
+   * `1` - IMB is currently warming up/booting.
+   * `2` - IMB is on.
+ * `timestamp` - string: ISO 8601 formated point in time of when the lamp state change was observed.
+
+#### Lamp turned on or off
+Sent when the lamp turned on or off.
+The lamp is still cooling if `is_on` is false and the `cooldown` field exists. The `cooldown` field is omitted if the lamp isn't being cooled.
+The `timestamp` field might be missing if we never got any information from the projector since the app started.
+ * `msg_type` - string: `projector`
+ * `action` - string: `lamp_changed`
+ * `is_on` - boolean: True if the lamp is shining bright, false if it's off.
+ * `timestamp` - string: ISO 8601 formated point in time of when the lamp state change was observed.
+ * `cooldown` - int: The time the lamp still has to be cooled in seconds.
 
 #### Douser opened or closed
 Sent when the douser was opened or closed.
- * `msg_type` - string: `playback`
+ * `msg_type` - string: `projector`
  * `action` - string: `douser_changed`
- * `isopen` - boolean: True if the douser is open now, false if it's closed.
+ * `is_open` - boolean: True if the douser is open now, false if it's closed.
 
 ## Client -> Server
 ### Dolby CP750 Audio
@@ -138,7 +145,7 @@ This is used to differentiate between 5.1 and 7.1 surround sound sources.
 
 ### Integ Jnior 310
 #### Change light intensity
-Change the volume to the specified level.
+Dim the light to one of the given intensities.
  * `msg_type` - string: `lights`
  * `action` - string: `set_light_level`
  * `level` - int: The light intensity to choose as a value from 0-3. 0 = 0%, 1 = 33%, 2 = 66% and 3 = 100%.
@@ -172,30 +179,30 @@ Select the input source to display the image from including the screen ratio.
 ### Christie Solaria PIB
 #### Start the IMB
 Power on the IMB.
- * `msg_type` - string: `playback`
+ * `msg_type` - string: `projector`
  * `action` - string: `power_on`
 
 #### Shut down the IMB
 Power off the IMB. This will start cooling the lamp too if it was on.
- * `msg_type` - string: `playback`
+ * `msg_type` - string: `projector`
  * `action` - string: `power_off`
 
 #### Turn lamp on
 Turn on the lamp.
- * `msg_type` - string: `playback`
+ * `msg_type` - string: `projector`
  * `action` - string: `lamp_on`
 
 #### Turn lamp off
 Start cooling the lamp.
- * `msg_type` - string: `playback`
+ * `msg_type` - string: `projector`
  * `action` - string: `lamp_off`
 
 #### Open the douser
 Open the douser.
- * `msg_type` - string: `playback`
+ * `msg_type` - string: `projector`
  * `action` - string: `douser_open`
 
 #### Close the douser
 Close the douser.
- * `msg_type` - string: `playback`
+ * `msg_type` - string: `projector`
  * `action` - string: `douser_close`

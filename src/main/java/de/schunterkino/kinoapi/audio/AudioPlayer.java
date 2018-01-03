@@ -18,7 +18,8 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 import de.schunterkino.kinoapi.App;
 import de.schunterkino.kinoapi.christie.serial.ISolariaSerialStatusUpdateReceiver;
-import de.schunterkino.kinoapi.christie.serial.PowerMode;
+import de.schunterkino.kinoapi.christie.serial.LampState;
+import de.schunterkino.kinoapi.christie.serial.PowerState;
 import de.schunterkino.kinoapi.christie.serial.SolariaCommand;
 import de.schunterkino.kinoapi.christie.serial.SolariaSocketCommands;
 import de.schunterkino.kinoapi.dolby.DecodeMode;
@@ -201,9 +202,9 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 	}
 
 	@Override
-	public void onPowerModeChanged(PowerMode mode, PowerMode oldMode, Instant timestamp, Integer cooldown) {
+	public void onLampStateChanged(LampState state, LampState oldState, Instant timestamp, Long cooldown) {
 		// Play a sound when the mode changes from cooling to something else.
-		if (oldMode == PowerMode.InCoolDown)
+		if (oldState == LampState.Cooling)
 			preparePlayingSound();
 	}
 
@@ -245,5 +246,9 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 
 	@Override
 	public void onDouserStateChanged(boolean isopen) {
+	}
+
+	@Override
+	public void onPowerStateChanged(PowerState state, Instant timestamp) {
 	}
 }

@@ -40,7 +40,8 @@ import de.schunterkino.kinoapi.christie.ChristieCommand;
 import de.schunterkino.kinoapi.christie.ChristieSocketCommands;
 import de.schunterkino.kinoapi.christie.IChristieStatusUpdateReceiver;
 import de.schunterkino.kinoapi.christie.serial.ISolariaSerialStatusUpdateReceiver;
-import de.schunterkino.kinoapi.christie.serial.PowerMode;
+import de.schunterkino.kinoapi.christie.serial.LampState;
+import de.schunterkino.kinoapi.christie.serial.PowerState;
 import de.schunterkino.kinoapi.christie.serial.SolariaCommand;
 import de.schunterkino.kinoapi.christie.serial.SolariaSocketCommands;
 import de.schunterkino.kinoapi.dolby.DecodeMode;
@@ -59,8 +60,9 @@ import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.IMBConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.DouserChangedMessage;
+import de.schunterkino.kinoapi.websocket.messages.christie.LampChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.LampOffMessage;
-import de.schunterkino.kinoapi.websocket.messages.christie.PowerModeChangedMessage;
+import de.schunterkino.kinoapi.websocket.messages.christie.PowerChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.jnior.LightsConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.DecodeModeChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.DolbyConnectionMessage;
@@ -86,7 +88,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 	// Close the websocket if there are problems with the token.
 	public static final int AUTH_INVALID_TOKEN_ERROR_CODE = 4401;
 	public static final int AUTH_TOKEN_EXPIRED_ERROR_CODE = 4402;
-	
+
 	// The number of threads that will be used to process the incoming network data.
 	// By default this will be Runtime.getRuntime().availableProcessors() which is
 	// 1 on a raspberry pi.
@@ -267,8 +269,11 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 		// Tell which part of the projector is currently enabled.
 		if (solaria.isConnected()) {
-			conn.send(gson.toJson(new PowerModeChangedMessage(solaria.getCommands().getPowerMode(),
-					solaria.getCommands().getPowerModeChangedTimestamp(), solaria.getCommands().getCooldownTime())));
+			conn.send(gson.toJson(new PowerChangedMessage(solaria.getCommands().getPowerState(),
+					solaria.getCommands().getPowerStateChangedTimestamp())));
+
+			conn.send(gson.toJson(new LampChangedMessage(solaria.getCommands().getLampState(),
+					solaria.getCommands().getLampStateChangedTimestamp(), solaria.getCommands().getCooldownTime())));
 
 			conn.send(gson.toJson(new DouserChangedMessage(solaria.getCommands().isDouserOpen())));
 		}
@@ -417,8 +422,14 @@ public class CinemaWebSocketServer extends WebSocketServer
 	}
 
 	@Override
-	public void onPowerModeChanged(PowerMode mode, PowerMode oldPowerMode, Instant timestamp, Integer cooldown) {
-		PowerModeChangedMessage msg = new PowerModeChangedMessage(mode, timestamp, cooldown);
+	public void onPowerStateChanged(PowerState state, Instant timestamp) {
+		PowerChangedMessage msg = new PowerChangedMessage(state, timestamp);
+		broadcast(gson.toJson(msg));
+	}
+
+	@Override
+	public void onLampStateChanged(LampState state, LampState oldState, Instant timestamp, Long cooldown) {
+		LampChangedMessage msg = new LampChangedMessage(state, timestamp, cooldown);
 		broadcast(gson.toJson(msg));
 	}
 

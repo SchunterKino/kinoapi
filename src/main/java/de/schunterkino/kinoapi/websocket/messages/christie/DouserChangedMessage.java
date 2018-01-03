@@ -4,10 +4,10 @@ import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 
 public class DouserChangedMessage extends BaseMessage {
 
-	boolean isopen;
+	boolean is_open;
 
 	public DouserChangedMessage(boolean isopen) {
-		super("playback", "douser_changed");
-		this.isopen = isopen;
+		super("projector", "douser_changed");
+		this.is_open = isopen;
 	}
 }

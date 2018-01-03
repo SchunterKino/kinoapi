@@ -1,6 +1,7 @@
 package de.schunterkino.kinoapi.christie.serial;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -24,14 +25,18 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 	private PowerMode oldPowerMode;
 	private PowerMode powerMode;
 
+	// Abstraction for clients.
+	// Separate lamp and IMB power.
+	private PowerState powerState;
+	private Instant powerStateChangedTimestamp;
+
+	private LampState lampState;
+	private LampState oldLampState;
+	private Instant lampStateChangedTimestamp;
+
 	// Get how long the lamp still needs to be cooled.
 	private Pattern cooldownPattern;
-	private Integer cooldownTime;
-
-	// Remember when we noticed the change in the power mode.
-	// That way we can calculate the remaining lamp cool down
-	// time for clients connecting late.
-	private Instant powerModeChangedTimestamp;
+	private Long cooldownTime;
 
 	// Cache if the douser is currently open.
 	private Pattern douserStatePattern;
@@ -41,11 +46,15 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		super();
 
 		powerModePattern = Pattern.compile("\\(PWR!([0-9]+) \"([^\"]*)\"\\)");
-		powerMode = oldPowerMode = PowerMode.PowerOff;
+		powerMode = PowerMode.PowerOff;
+
+		powerState = PowerState.Off;
+		powerStateChangedTimestamp = null;
+		lampState = oldLampState = LampState.Off;
+		lampStateChangedTimestamp = null;
 
 		cooldownPattern = Pattern.compile("\\(PWR\\+COOL!([0-9]+)\\)");
 		cooldownTime = null;
-		powerModeChangedTimestamp = null;
 
 		douserStatePattern = Pattern.compile("\\(SHU!([0-9]+)\\)");
 		douserOpen = false;
@@ -117,23 +126,38 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		return handled;
 	}
 
-	public PowerMode getPowerMode() {
-		return powerMode;
+	public PowerState getPowerState() {
+		return powerState;
 	}
 
-	public Instant getPowerModeChangedTimestamp() {
-		return powerModeChangedTimestamp;
+	public Instant getPowerStateChangedTimestamp() {
+		return powerStateChangedTimestamp;
 	}
 
-	public Integer getCooldownTime() {
-		return cooldownTime;
+	public LampState getLampState() {
+		return lampState;
+	}
+
+	public Instant getLampStateChangedTimestamp() {
+		return lampStateChangedTimestamp;
+	}
+
+	public Long getCooldownTime() {
+		// Always calculate the current cooldown time.
+		if (cooldownTime == null)
+			return null;
+
+		// See how much time already elapsed since we noticed that the lamp started
+		// cooling.
+		long timeSinceCoolingStart = lampStateChangedTimestamp.until(Instant.now(), ChronoUnit.SECONDS);
+		return Math.max(0, cooldownTime - timeSinceCoolingStart);
 	}
 
 	public boolean isDouserOpen() {
 		return douserOpen;
 	}
 
-	private void updateCooldownTimer(int cooldown) {
+	private void updateCooldownTimer(long cooldown) {
 		// Don't inform if the status didn't change.
 		if (cooldownTime == cooldown)
 			return;
@@ -143,7 +167,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		// Notify listeners.
 		synchronized (listeners) {
 			for (ISolariaSerialStatusUpdateReceiver listener : listeners) {
-				listener.onPowerModeChanged(powerMode, oldPowerMode, powerModeChangedTimestamp, cooldown);
+				listener.onLampStateChanged(lampState, oldLampState, lampStateChangedTimestamp, cooldown);
 			}
 		}
 	}
@@ -153,25 +177,77 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		if (powerMode == mode)
 			return;
 
-		oldPowerMode = powerMode;
 		powerMode = mode;
-		powerModeChangedTimestamp = Instant.now();
 
+		// See if the power mode change involved the lamp.
+		handleLampStateChange();
+
+		// Update power state.
+		handlePowerStateChange();
+	}
+
+	private void handlePowerStateChange() {
+		switch (powerMode) {
+		case PowerOff:
+			powerState = PowerState.Off;
+			break;
+		case InWarmUp:
+			powerState = PowerState.WarmingUp;
+			break;
+		case LampOff:
+			powerState = PowerState.On;
+			break;
+		default:
+			// Not a state we care about here.
+			return;
+		}
+
+		// Reset cooldown time now that it's irrelevant.
+		cooldownTime = null;
+
+		powerStateChangedTimestamp = Instant.now();
+
+		// Notify listeners.
+		synchronized (listeners) {
+			for (ISolariaSerialStatusUpdateReceiver listener : listeners) {
+				listener.onPowerStateChanged(powerState, powerStateChangedTimestamp);
+			}
+		}
+	}
+
+	private void handleLampStateChange() {
+		LampState oldLampState = lampState;
+		switch (powerMode) {
+		case LampOff:
+			lampState = LampState.Off;
+			break;
+		case InCoolDown:
+			lampState = LampState.Cooling;
+			break;
+		case LampOn:
+			lampState = LampState.On;
+			break;
+		default:
+			// Not a state we care about here.
+			return;
+		}
+
+		this.oldLampState = oldLampState;
+		lampStateChangedTimestamp = Instant.now();
+
+		// We're waiting until we know the cooldown time from the second command.
 		// The cooldown mode is special in that we ask for the remaining
 		// cooldown time first.
 		// Inform the listeners after we got the time it's still cooling.
-		if (powerMode == PowerMode.InCoolDown) {
-			if (oldPowerMode != PowerMode.InCoolDown)
-				addCommand(SolariaCommand.GetCooldownTimer);
-		} else {
-			// Reset cooldown time now that it's irrelevant.
-			cooldownTime = null;
+		if (lampState == LampState.Cooling) {
+			addCommand(SolariaCommand.GetCooldownTimer);
+			return;
+		}
 
-			// Notify listeners.
-			synchronized (listeners) {
-				for (ISolariaSerialStatusUpdateReceiver listener : listeners) {
-					listener.onPowerModeChanged(mode, oldPowerMode, powerModeChangedTimestamp, null);
-				}
+		// Notify listeners.
+		synchronized (listeners) {
+			for (ISolariaSerialStatusUpdateReceiver listener : listeners) {
+				listener.onLampStateChanged(lampState, oldLampState, lampStateChangedTimestamp, cooldownTime);
 			}
 		}
 	}
@@ -218,8 +294,8 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 	public boolean onMessage(BaseMessage baseMsg, String message)
 			throws WebSocketCommandException, JsonSyntaxException {
 
-		// Handle all IMB playback related commands.
-		if (!"playback".equals(baseMsg.getMessageType()))
+		// Handle all PIB related commands.
+		if (!"projector".equals(baseMsg.getMessageType()))
 			return false;
 
 		switch (baseMsg.getAction()) {
@@ -241,8 +317,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			if (socket.isConnected()) {
 				addCommand(SolariaCommand.SetPowerStatus, PowerMode.LampOn.ordinal(), UseResponse.IgnoreResponse);
 				addCommand(SolariaCommand.GetPowerStatus);
-			}
-			else
+			} else
 				throw new WebSocketCommandException("Failed to turn lamp on. No connection to Christie projector.");
 			return true;
 		case "lamp_off":
@@ -257,24 +332,23 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			if (socket.isConnected()) {
 				addCommand(SolariaCommand.SetPowerStatus, PowerMode.PowerOff.ordinal(), UseResponse.IgnoreResponse);
 				addCommand(SolariaCommand.GetPowerStatus);
-			}
-			else
-				throw new WebSocketCommandException("Failed to power off the IMB. No connection to Christie projector.");
+			} else
+				throw new WebSocketCommandException(
+						"Failed to power off the IMB. No connection to Christie projector.");
 			return true;
 		case "power_on":
 			if (socket.isConnected()) {
 				// Make sure we actually turn the IMB on and not the lamp off.
-				if (getPowerMode() != PowerMode.PowerOff)
+				if (powerMode != PowerMode.PowerOff)
 					throw new WebSocketCommandException("The IMB is already on.");
-				
+
 				addCommand(SolariaCommand.SetPowerStatus, PowerMode.LampOff.ordinal(), UseResponse.IgnoreResponse);
 				addCommand(SolariaCommand.GetPowerStatus);
-			}
-			else
+			} else
 				throw new WebSocketCommandException("Failed to power on the IMB. No connection to Christie projector.");
 			return true;
 		}
-		
+
 		return false;
 	}
 }

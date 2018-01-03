@@ -4,6 +4,7 @@ import java.time.Instant;
 
 public interface ISolariaSerialStatusUpdateReceiver {
 
-	public void onPowerModeChanged(PowerMode mode, PowerMode oldMode, Instant timestamp, Integer cooldown);
+	public void onPowerStateChanged(PowerState state, Instant timestamp);
+	public void onLampStateChanged(LampState state, LampState oldState, Instant timestamp, Long cooldown);
 	public void onDouserStateChanged(boolean isopen);
 }
