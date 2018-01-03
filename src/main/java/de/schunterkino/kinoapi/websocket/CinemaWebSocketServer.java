@@ -28,7 +28,6 @@ import javax.xml.bind.DatatypeConverter;
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.exceptions.InvalidDataException;
-import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.java_websocket.server.WebSocketServer;
@@ -68,6 +67,7 @@ import de.schunterkino.kinoapi.websocket.messages.volume.DolbyConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.InputModeChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.MuteStatusChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.VolumeChangedMessage;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.impl.TextCodec;
 
@@ -83,7 +83,9 @@ public class CinemaWebSocketServer extends WebSocketServer
 		implements IDolbyStatusUpdateReceiver, IJniorStatusUpdateReceiver, IChristieStatusUpdateReceiver,
 		ISolariaSerialStatusUpdateReceiver, IServerSocketStatusUpdateReceiver {
 
-	public static final int AUTH_ERROR_CODE = 4401;
+	// Close the websocket if there are problems with the token.
+	public static final int AUTH_INVALID_TOKEN_ERROR_CODE = 4401;
+	public static final int AUTH_TOKEN_EXPIRED_ERROR_CODE = 4402;
 	
 	// The number of threads that will be used to process the incoming network data.
 	// By default this will be Runtime.getRuntime().availableProcessors() which is
@@ -192,17 +194,17 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 	private void validateToken(ClientHandshake request) throws InvalidDataException {
 		if (!request.hasFieldValue("Cookie"))
-			throw new InvalidDataException(AUTH_ERROR_CODE, "Token missing.");
+			throw new InvalidDataException(AUTH_INVALID_TOKEN_ERROR_CODE, "Token missing.");
 
 		List<HttpCookie> cookie = HttpCookie.parse(request.getFieldValue("Cookie"));
 		// Malformed cookie.
 		if (cookie.size() != 1)
-			throw new InvalidDataException(CloseFrame.POLICY_VALIDATION, "Not accepted!");
+			throw new InvalidDataException(AUTH_INVALID_TOKEN_ERROR_CODE, "Not accepted!");
 
 		HttpCookie tokenCookie = cookie.get(0);
 		// Invalid cookie name.
 		if (!tokenCookie.getName().equals("token"))
-			throw new InvalidDataException(CloseFrame.POLICY_VALIDATION, "Not accepted!");
+			throw new InvalidDataException(AUTH_INVALID_TOKEN_ERROR_CODE, "Not accepted!");
 
 		String compactJws = tokenCookie.getValue();
 		// System.out.println("Token is " + compactJws);
@@ -213,10 +215,14 @@ public class CinemaWebSocketServer extends WebSocketServer
 			Jwts.parser().requireSubject("SchunterKinoRemote")
 					.setSigningKey(TextCodec.BASE64.decode(App.getConfigurationString("jws_signature_key")))
 					.parseClaimsJws(compactJws);
+		} catch (ExpiredJwtException e) {
+			System.err.println(e.getMessage());
+			// e.printStackTrace();
+			throw new InvalidDataException(AUTH_TOKEN_EXPIRED_ERROR_CODE, "Token expired.");
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
 			// e.printStackTrace();
-			throw new InvalidDataException(AUTH_ERROR_CODE, "Invalid token.");
+			throw new InvalidDataException(AUTH_INVALID_TOKEN_ERROR_CODE, "Invalid token.");
 		}
 	}
 
