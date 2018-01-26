@@ -251,4 +251,12 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 	@Override
 	public void onPowerStateChanged(PowerState state, Instant timestamp) {
 	}
+
+	@Override
+	public void onSolariaConnected() {
+	}
+
+	@Override
+	public void onSolariaDisconnected() {
+	}
 }

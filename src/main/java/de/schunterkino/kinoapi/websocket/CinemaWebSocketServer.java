@@ -58,10 +58,11 @@ import de.schunterkino.kinoapi.sockets.BaseSerialPortClient;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
-import de.schunterkino.kinoapi.websocket.messages.christie.IMBConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.DouserChangedMessage;
+import de.schunterkino.kinoapi.websocket.messages.christie.IMBConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.LampChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.LampOffMessage;
+import de.schunterkino.kinoapi.websocket.messages.christie.PIBConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.PowerChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.jnior.LightsConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.volume.DecodeModeChangedMessage;
@@ -268,6 +269,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 		}
 
 		// Tell which part of the projector is currently enabled.
+		conn.send(gson.toJson(new PIBConnectionMessage(solaria.isConnected())));
 		if (solaria.isConnected()) {
 			conn.send(gson.toJson(new PowerChangedMessage(solaria.getCommands().getPowerState(),
 					solaria.getCommands().getPowerStateChangedTimestamp())));
@@ -418,6 +420,18 @@ public class CinemaWebSocketServer extends WebSocketServer
 	@Override
 	public void onLampTurnedOff(Instant lampOffTime) {
 		LampOffMessage msg = new LampOffMessage(lampOffTime);
+		broadcast(gson.toJson(msg));
+	}
+
+	@Override
+	public void onSolariaConnected() {
+		PIBConnectionMessage msg = new PIBConnectionMessage(true);
+		broadcast(gson.toJson(msg));
+	}
+
+	@Override
+	public void onSolariaDisconnected() {
+		PIBConnectionMessage msg = new PIBConnectionMessage(false);
 		broadcast(gson.toJson(msg));
 	}
 

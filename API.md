@@ -2,15 +2,17 @@
 
 When a websocket connection to the server on port 8641 is opened the server sends messages about the current status of the system right away, namely:
 
- * `dolby_connection` - Indicate if the audio processor is available.
+ * `volume`:`connection` - Indicate if the audio processor is available.
    * `volume_changed` - Current volume level. *Only sent if the Dolby connection is available.*
    * `mute_status_changed` - Current mute status. *Only sent if the Dolby connection is available.*
    * `input_mode_changed` - Current active input mode. *Only sent if the Dolby connection is available.*
    * `decode_mode_changed` - Current active decode mode for Digital 1 input. *Only sent if the Dolby connection is available.*
- * `lights_connection` - Indicate if the Jnior connection for light regulation is available.
- * `projector_connection` - Indicate if the Christie IMB connection for projector control is available.
- * `power_mode_changed` - The current status of the projector.
- * `douser_changed` - Current open state of the douser.
+ * `lights`:`connection` - Indicate if the Jnior connection for light regulation is available.
+ * `playback`:`connection` - Indicate if the Christie IMB connection for playback control is available.
+ * `projector`:`connection` - Indicate if the serial connection to the Christie PIB for projector control is available.
+   * `power_changed` - Current power state of the projector.
+   * `lamp_changed` - Current state of the lamp.
+   * `douser_changed` - Current open state of the douser.
 
 ## Message format
 Every message is encoded as a JSON object containing at least a `msg_type` and an `action` string attribute.
@@ -32,7 +34,7 @@ Sent if there is some kind of problem parsing or processing a message from the c
 #### Connection availability
 Sent when the audio processor gets connected or disconnected.
  * `msg_type` - string: `volume`
- * `action` - string: `dolby_connection`
+ * `action` - string: `connection`
  * `connected` - boolean: `true` if connection to Dolby CP750 is available, `false` otherwise.
 
 #### Volume changed notification
@@ -64,17 +66,23 @@ This is used to differentiate between 5.1 and 7.1 surround sound sources.
 #### Connection availability
 Sent when the Jnior box for lights gets connected or disconnected.
  * `msg_type` - string: `lights`
- * `action` - string: `lights_connection`
+ * `action` - string: `connection`
  * `connected` - boolean: `true` if connection to Jnior 310 is available, `false` otherwise.
 
 ### Christie IMB-S2
 #### Connection availability
-Sent when the Christie Projector for playback control gets connected or disconnected.
+Sent when the Christie IMB for playback control gets connected or disconnected.
  * `msg_type` - string: `playback`
- * `action` - string: `projector_connection`
+ * `action` - string: `connection`
  * `connected` - boolean: `true` if connection to Christie IMB-S2 is available, `false` otherwise.
 
 ### Christie Solaria PIB
+#### Connection availability
+Sent when the Christie Projector for projector control gets connected or disconnected.
+ * `msg_type` - string: `projector`
+ * `action` - string: `connection`
+ * `connected` - boolean: `true` if connection to Christie PIB is available, `false` otherwise.
+
 #### IMB power state changed
 Sent when the IMB turned on or off.
 The `timestamp` field might be missing if we never got any information from the projector since the app started.

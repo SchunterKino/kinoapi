@@ -65,10 +65,22 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 
 	@Override
 	protected void onSocketConnected() {
+		// Notify listeners.
+		synchronized (listeners) {
+			for (ISolariaSerialStatusUpdateReceiver listener : listeners) {
+				listener.onSolariaConnected();
+			}
+		}
 	}
 
 	@Override
 	protected void onSocketDisconnected() {
+		// Notify listeners.
+		synchronized (listeners) {
+			for (ISolariaSerialStatusUpdateReceiver listener : listeners) {
+				listener.onSolariaDisconnected();
+			}
+		}
 	}
 
 	@Override
