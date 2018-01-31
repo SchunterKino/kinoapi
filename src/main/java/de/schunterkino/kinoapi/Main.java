@@ -15,7 +15,6 @@ import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.JniorCommand;
 import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
-import de.schunterkino.kinoapi.listen.SchunterServerSocket;
 import de.schunterkino.kinoapi.sockets.BaseSerialPortClient;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.CinemaWebSocketServer;
@@ -33,9 +32,6 @@ public class Main {
 
 	private BaseSerialPortClient<SolariaSocketCommands, ISolariaSerialStatusUpdateReceiver, SolariaCommand> solariaConnection;
 	private Thread solariaThread;
-
-	private SchunterServerSocket serverSocket;
-	private Thread serverThread;
 
 	private AudioPlayer audio;
 
@@ -65,17 +61,13 @@ public class Main {
 		solariaThread = new Thread(solariaConnection);
 		solariaThread.start();
 
-		serverSocket = new SchunterServerSocket(App.getConfigurationInteger("listen_port"));
-		serverThread = new Thread(serverSocket);
-		serverThread.start();
-
 		// Create an audio player to play some nice tunes when the lamp is
 		// cooled off.
-		audio = new AudioPlayer(dolbyConnection, solariaConnection, serverSocket);
+		audio = new AudioPlayer(dolbyConnection, solariaConnection);
 
 		// Start the websocket server now.
 		websocketServer = new CinemaWebSocketServer(App.getConfigurationInteger("websocket_port"), dolbyConnection,
-				jniorConnection, christieConnection, solariaConnection, serverSocket);
+				jniorConnection, christieConnection, solariaConnection);
 		websocketServer.start();
 		System.out.println("WebSocket: Server created on port: " + websocketServer.getPort());
 	}
@@ -86,7 +78,6 @@ public class Main {
 		jniorConnection.stopServer();
 		christieConnection.stopServer();
 		solariaConnection.stopServer();
-		serverSocket.stopServer();
 
 		// Shutdown the servers.
 		if (websocketServer != null) {
@@ -146,18 +137,6 @@ public class Main {
 			}
 			solariaThread = null;
 			System.out.println("Solaria: Client stopped.");
-		}
-
-		if (serverThread != null) {
-			try {
-				if (!serverSocket.isRunning())
-					serverThread.interrupt();
-				serverThread.join();
-			} catch (InterruptedException e) {
-				// We want to stop anyways. Errors are ok.
-			}
-			serverThread = null;
-			System.out.println("ServerSocket: Server stopped.");
 		}
 
 		// Kill any running audio thread.

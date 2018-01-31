@@ -16,7 +16,6 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedList;
 import java.util.List;
@@ -52,8 +51,6 @@ import de.schunterkino.kinoapi.dolby.InputMode;
 import de.schunterkino.kinoapi.jnior.IJniorStatusUpdateReceiver;
 import de.schunterkino.kinoapi.jnior.JniorCommand;
 import de.schunterkino.kinoapi.jnior.JniorSocketCommands;
-import de.schunterkino.kinoapi.listen.IServerSocketStatusUpdateReceiver;
-import de.schunterkino.kinoapi.listen.SchunterServerSocket;
 import de.schunterkino.kinoapi.sockets.BaseSerialPortClient;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
@@ -61,7 +58,6 @@ import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.DouserChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.IMBConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.LampChangedMessage;
-import de.schunterkino.kinoapi.websocket.messages.christie.LampOffMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.PIBConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.PowerChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.jnior.LightsConnectionMessage;
@@ -84,7 +80,7 @@ import io.jsonwebtoken.impl.TextCodec;
  */
 public class CinemaWebSocketServer extends WebSocketServer
 		implements IDolbyStatusUpdateReceiver, IJniorStatusUpdateReceiver, IChristieStatusUpdateReceiver,
-		ISolariaSerialStatusUpdateReceiver, IServerSocketStatusUpdateReceiver {
+		ISolariaSerialStatusUpdateReceiver {
 
 	// Close the websocket if there are problems with the token.
 	public static final int AUTH_INVALID_TOKEN_ERROR_CODE = 4401;
@@ -123,12 +119,6 @@ public class CinemaWebSocketServer extends WebSocketServer
 	private BaseSerialPortClient<SolariaSocketCommands, ISolariaSerialStatusUpdateReceiver, SolariaCommand> solaria;
 
 	/**
-	 * Server socket which is used to listen to the event of the projector lamp
-	 * being off.
-	 */
-	private SchunterServerSocket server;
-
-	/**
 	 * List of JSON protocol incoming command handlers. Incoming messages on the
 	 * WebSockets are passed to the handlers until one claims responsibility for the
 	 * packet.
@@ -149,8 +139,7 @@ public class CinemaWebSocketServer extends WebSocketServer
 			BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolby,
 			BaseSocketClient<JniorSocketCommands, IJniorStatusUpdateReceiver, JniorCommand> jnior,
 			BaseSocketClient<ChristieSocketCommands, IChristieStatusUpdateReceiver, ChristieCommand> christie,
-			BaseSerialPortClient<SolariaSocketCommands, ISolariaSerialStatusUpdateReceiver, SolariaCommand> solaria,
-			SchunterServerSocket server) {
+			BaseSerialPortClient<SolariaSocketCommands, ISolariaSerialStatusUpdateReceiver, SolariaCommand> solaria) {
 		super(new InetSocketAddress(port), DECODER_POOL_SIZE);
 
 		this.gson = new Gson();
@@ -175,9 +164,6 @@ public class CinemaWebSocketServer extends WebSocketServer
 		this.solaria = solaria;
 		solaria.getCommands().registerListener(this);
 		messageHandlers.add(solaria.getCommands());
-
-		this.server = server;
-		server.registerListener(this);
 	}
 
 	@Override
@@ -261,12 +247,6 @@ public class CinemaWebSocketServer extends WebSocketServer
 
 		// And if the projector is up.
 		conn.send(gson.toJson(new IMBConnectionMessage(christie.isConnected())));
-		if (christie.isConnected()) {
-			Instant lampOffTime = server.getLampOffTime();
-			// Only send the lamp off time if it's been max. 2 hours ago.
-			if (lampOffTime != null && Duration.between(lampOffTime, Instant.now()).toHours() < 2)
-				conn.send(gson.toJson(new LampOffMessage(lampOffTime)));
-		}
 
 		// Tell which part of the projector is currently enabled.
 		conn.send(gson.toJson(new PIBConnectionMessage(solaria.isConnected())));
@@ -414,12 +394,6 @@ public class CinemaWebSocketServer extends WebSocketServer
 	@Override
 	public void onChristieDisconnected() {
 		IMBConnectionMessage msg = new IMBConnectionMessage(false);
-		broadcast(gson.toJson(msg));
-	}
-
-	@Override
-	public void onLampTurnedOff(Instant lampOffTime) {
-		LampOffMessage msg = new LampOffMessage(lampOffTime);
 		broadcast(gson.toJson(msg));
 	}
 

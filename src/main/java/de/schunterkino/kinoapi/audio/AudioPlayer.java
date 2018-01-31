@@ -27,8 +27,6 @@ import de.schunterkino.kinoapi.dolby.DolbyCommand;
 import de.schunterkino.kinoapi.dolby.DolbySocketCommands;
 import de.schunterkino.kinoapi.dolby.IDolbyStatusUpdateReceiver;
 import de.schunterkino.kinoapi.dolby.InputMode;
-import de.schunterkino.kinoapi.listen.IServerSocketStatusUpdateReceiver;
-import de.schunterkino.kinoapi.listen.SchunterServerSocket;
 import de.schunterkino.kinoapi.sockets.BaseSerialPortClient;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 
@@ -39,7 +37,7 @@ import de.schunterkino.kinoapi.sockets.BaseSocketClient;
  * @author www.codejava.net
  *
  */
-public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IServerSocketStatusUpdateReceiver,
+public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver,
 		ISolariaSerialStatusUpdateReceiver {
 
 	private BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolby;
@@ -50,12 +48,10 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 	private SecureRandom rnd;
 
 	public AudioPlayer(BaseSocketClient<DolbySocketCommands, IDolbyStatusUpdateReceiver, DolbyCommand> dolby,
-			BaseSerialPortClient<SolariaSocketCommands, ISolariaSerialStatusUpdateReceiver, SolariaCommand> solaria,
-			SchunterServerSocket server) {
+			BaseSerialPortClient<SolariaSocketCommands, ISolariaSerialStatusUpdateReceiver, SolariaCommand> solaria) {
 		this.dolby = dolby;
 		dolby.getCommands().registerListener(this);
 		solaria.getCommands().registerListener(this);
-		server.registerListener(this);
 
 		rnd = new SecureRandom();
 	}
@@ -194,11 +190,6 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver, IS
 
 	@Override
 	public void onDecodeModeChanged(DecodeMode mode) {
-	}
-
-	@Override
-	public void onLampTurnedOff(Instant lampOffTime) {
-		preparePlayingSound();
 	}
 
 	@Override
