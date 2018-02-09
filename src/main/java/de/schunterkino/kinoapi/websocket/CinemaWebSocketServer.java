@@ -277,7 +277,8 @@ public class CinemaWebSocketServer extends WebSocketServer
 			// bit.
 			System.err.println("WebSocket: ServerSocket error: " + ex.getMessage());
 		}
-		ex.printStackTrace();
+		if (!(ex instanceof IOException))
+			ex.printStackTrace();
 	}
 
 	@Override
