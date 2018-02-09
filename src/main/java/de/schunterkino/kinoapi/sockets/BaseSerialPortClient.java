@@ -54,6 +54,7 @@ public class BaseSerialPortClient<T extends BaseCommands<S, V>, S, V> implements
 					serial = (SerialPort) commPort;
 					serial.setSerialPortParams(115200, SerialPort.DATABITS_8, SerialPort.STOPBITS_1,
 							SerialPort.PARITY_NONE);
+					serial.enableReceiveTimeout(timeout);
 					// serialPort.setFlowControlMode(SerialPort.FLOWCONTROL_RTSCTS_IN
 					// |
 					// SerialPort.FLOWCONTROL_RTSCTS_OUT);
