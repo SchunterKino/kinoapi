@@ -160,7 +160,6 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 		} catch (IOException | InterruptedException e) {
 			if (!stop) {
 				System.err.printf("%s: Error in reader thread: %s%n", LOG_TAG, e.getMessage());
-				e.printStackTrace();
 			}
 
 			// Reset command so we don't wait for a response anymore.
