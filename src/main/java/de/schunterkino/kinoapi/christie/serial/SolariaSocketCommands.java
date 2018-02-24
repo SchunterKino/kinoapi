@@ -3,9 +3,7 @@ package de.schunterkino.kinoapi.christie.serial;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,7 +48,8 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 	private Pattern activeChannelPattern;
 	private int activeChannelIndex;
 	private ChannelType activeChannel;
-	private HashMap<Integer, ChannelType> channelMapping;
+	// This list must match the ChannelType enum.
+	private static final List<Integer> channelMapping = Arrays.asList(-1, 101, 102, 109, 110);
 
 	public SolariaSocketCommands() {
 		super();
@@ -77,12 +76,6 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		activeChannelPattern = Pattern.compile("\\(CHA!([0-9]+)\\)");
 		activeChannelIndex = -1;
 		activeChannel = ChannelType.Unknown;
-
-		// Map internal channel number to readable enum.
-		channelMapping.put(101, ChannelType.IMB_Flat);
-		channelMapping.put(102, ChannelType.IMB_Scope);
-		channelMapping.put(109, ChannelType.DVIA_Flat);
-		channelMapping.put(110, ChannelType.DVIA_Scope);
 
 		watchCommand(SolariaCommand.GetPowerStatus);
 		watchCommand(SolariaCommand.GetDouserState);
@@ -348,10 +341,12 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		activeChannelIndex = channel;
 
 		// See which channel this is and map it to our enum.
-		activeChannel = channelMapping.get(channel);
+		int ordActiveChannel = channelMapping.indexOf(channel);
 		// Any other channel not in our enum is just unknown.
-		if (activeChannel == null)
+		if (ordActiveChannel == -1)
 			activeChannel = ChannelType.Unknown;
+		else
+			activeChannel = ChannelType.values()[ordActiveChannel];
 
 		// TODO: Get name of the channel using (NAM+C1XX?) or cache all names using
 		// (NAM+CALL?)
@@ -452,26 +447,12 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		case "set_channel":
 			if (socket.isConnected()) {
 				SetChannelMessage setChannelMsg = gson.fromJson(message, SetChannelMessage.class);
-				if (setChannelMsg.getChannel() <= 0 || setChannelMsg.getChannel() >= ChannelType.values().length)
-					throw new WebSocketCommandException(
-							"Invalid projector channel: " + setChannelMsg.getChannel());
-				
+				if (setChannelMsg.getChannel() <= 0 || setChannelMsg.getChannel() >= channelMapping.size())
+					throw new WebSocketCommandException("Invalid projector channel: " + setChannelMsg.getChannel());
+
 				// Get the right actual channel number.
-				ChannelType channel = ChannelType.values()[setChannelMsg.getChannel()];
-				int channelIndex = -1;
-				for (Entry<Integer, ChannelType> e : channelMapping.entrySet()) {
-					if (e.getValue() == channel) {
-						channelIndex = e.getKey();
-						break;
-					}
-				}
-				
-				// Someone fucked up here.
-				if (channelIndex == -1) {
-					System.err.printf("ChannelType is missing from channelMapping: %d%n", channel);
-					return true;
-				}
-				
+				int channelIndex = channelMapping.get(setChannelMsg.getChannel());
+
 				addCommand(SolariaCommand.SetActiveChannel, channelIndex, UseResponse.IgnoreResponse);
 				addCommand(SolariaCommand.GetActiveChannel);
 			} else
