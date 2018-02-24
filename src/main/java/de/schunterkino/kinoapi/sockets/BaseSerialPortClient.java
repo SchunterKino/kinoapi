@@ -38,56 +38,49 @@ public class BaseSerialPortClient<T extends BaseCommands<S, V>, S, V> implements
 		// Connect! And keep trying to connect too.
 		while (!stop) {
 			try {
-				try {
-					CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier(portName);
-					if (portIdentifier.isCurrentlyOwned())
-						throw new IOException("Port " + portName + " is currently in use");
+				CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier(portName);
+				if (portIdentifier.isCurrentlyOwned())
+					throw new IOException("Port " + portName + " is currently in use");
 
-					int timeout = 2000;
-					CommPort commPort = portIdentifier.open(this.getClass().getName(), timeout);
+				int timeout = 2000;
+				CommPort commPort = portIdentifier.open(this.getClass().getName(), timeout);
 
-					if (!(commPort instanceof SerialPort)) {
-						commPort.close();
-						throw new IOException(portName + " is not a serial port.");
-					}
-
-					serial = (SerialPort) commPort;
-					serial.setSerialPortParams(115200, SerialPort.DATABITS_8, SerialPort.STOPBITS_1,
-							SerialPort.PARITY_NONE);
-					serial.enableReceiveTimeout(timeout);
-					// serialPort.setFlowControlMode(SerialPort.FLOWCONTROL_RTSCTS_IN
-					// |
-					// SerialPort.FLOWCONTROL_RTSCTS_OUT);
-
-					// Start a thread to handle messages.
-					commands.setSerialPort(serial);
-					Thread readerThread = new Thread(commands);
-					readerThread.start();
-
-					System.out.printf("%s: Opened serial connection on %s.%n", log_tag, portName);
-
-					// Print a reconnect error message next time again now that
-					// we connected again.
-					alreadyPrintedError = false;
-
-					// Wait for the thread to be done.
-					// The thread only terminates, if there is an issue with the
-					// socket or we requested it to stop.
-					readerThread.join();
-
-				} catch (IOException | NoSuchPortException | PortInUseException | UnsupportedCommOperationException e) {
-					// The readerThread will die on its own if it already
-					// started.
-					if (!stop && !alreadyPrintedError) {
-						System.err.printf(
-								"%s: Error in connection. Trying to reconnect every %d seconds. Exception: %s%n",
-								log_tag, RECONNECT_TIME, e.getMessage());
-						// Don't print the error again if the server stays down.
-						alreadyPrintedError = true;
-					}
+				if (!(commPort instanceof SerialPort)) {
+					commPort.close();
+					throw new IOException(portName + " is not a serial port.");
 				}
-			} catch (InterruptedException e) {
-				System.err.printf("%s: Error while waiting for reader thread: %s%n", log_tag, e.getMessage());
+
+				serial = (SerialPort) commPort;
+				serial.setSerialPortParams(115200, SerialPort.DATABITS_8, SerialPort.STOPBITS_1,
+						SerialPort.PARITY_NONE);
+				serial.enableReceiveTimeout(timeout);
+				// serialPort.setFlowControlMode(SerialPort.FLOWCONTROL_RTSCTS_IN
+				// |
+				// SerialPort.FLOWCONTROL_RTSCTS_OUT);
+
+				System.out.printf("%s: Opened serial connection on %s.%n", log_tag, portName);
+
+				// Start to handle messages.
+				commands.setSerialPort(serial);
+
+				// Block until the socket to is done.
+				// This only returns if there is an issue with the
+				// socket or we requested it to stop.
+				commands.processSocket();
+
+				// Print a reconnect error message next time again now that
+				// we connected again.
+				alreadyPrintedError = false;
+
+			} catch (IOException | NoSuchPortException | PortInUseException | UnsupportedCommOperationException e) {
+				// The readerThread will die on its own if it already
+				// started.
+				if (!stop && !alreadyPrintedError) {
+					System.err.printf("%s: Error in connection. Trying to reconnect every %d seconds. Exception: %s%n",
+							log_tag, RECONNECT_TIME, e.getMessage());
+					// Don't print the error again if the server stays down.
+					alreadyPrintedError = true;
+				}
 			}
 
 			// Properly shutdown the client connection.

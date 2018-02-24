@@ -16,7 +16,7 @@ import com.google.gson.Gson;
 import de.schunterkino.kinoapi.websocket.IWebSocketMessageHandler;
 import purejavacomm.SerialPort;
 
-public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Runnable, IWebSocketMessageHandler {
+public abstract class BaseCommands<ListenerInterface, CommandEnum> implements IWebSocketMessageHandler {
 
 	protected String LOG_TAG = this.getClass().getSimpleName();
 
@@ -43,11 +43,11 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 	// Aggregate returned strings until our expected value is in there.
 	// This helps if we read from the socket faster than the server is sending data.
 	private String fullResponse;
-	
-	// Readable way to add a command and specify if we're interested in the response.
+
+	// Readable way to add a command and specify if we're interested in the
+	// response.
 	protected enum UseResponse {
-		WaitForResponse,
-		IgnoreResponse
+		WaitForResponse, IgnoreResponse
 	}
 
 	protected BaseCommands() {
@@ -80,8 +80,7 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 		}
 	}
 
-	@Override
-	public void run() {
+	public void processSocket() {
 		onSocketConnected();
 
 		// Go in a loop to process the data on the socket.
@@ -159,7 +158,7 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 			} while (!stop);
 		} catch (IOException | InterruptedException e) {
 			if (!stop) {
-				System.err.printf("%s: Error in reader thread: %s%n", LOG_TAG, e.getMessage());
+				System.err.printf("%s: Error while reading: %s%n", LOG_TAG, e.getMessage());
 			}
 
 			// Reset command so we don't wait for a response anymore.
@@ -222,7 +221,7 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements Ru
 			commandQueue.add(new CommandContainer<>(cmd, value, response == UseResponse.IgnoreResponse));
 		}
 	}
-	
+
 	protected void addCommand(CommandEnum cmd, int value) {
 		addCommand(cmd, value, UseResponse.WaitForResponse);
 	}

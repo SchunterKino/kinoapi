@@ -40,41 +40,34 @@ public class BaseSocketClient<T extends BaseCommands<S, V>, S, V> implements Run
 		// Connect! And keep trying to connect too.
 		while (!stop) {
 			try {
-				try {
-					socket = new Socket();
-					socket.connect(socketAddress, 5000);
-					socket.setKeepAlive(true);
-					socket.setSoTimeout(5000);
+				socket = new Socket();
+				socket.connect(socketAddress, 5000);
+				socket.setKeepAlive(true);
+				socket.setSoTimeout(5000);
 
-					// Start a thread to handle telnet messages.
-					commands.setSocket(socket);
-					Thread readerThread = new Thread(commands);
-					readerThread.start();
+				System.out.printf("%s: Connected to %s:%d.%n", log_tag, ip, port);
 
-					System.out.printf("%s: Connected to %s:%d.%n", log_tag, ip, port);
+				// Start to handle socket messages.
+				commands.setSocket(socket);
 
-					// Print a reconnect error message next time again now that
-					// we connected again.
-					alreadyPrintedError = false;
+				// Block until the socket to is done.
+				// This only returns if there is an issue with the
+				// socket or we requested it to stop.
+				commands.processSocket();
 
-					// Wait for the thread to be done.
-					// The thread only terminates, if there is an issue with the
-					// socket or we requested it to stop.
-					readerThread.join();
+				// Print a reconnect error message next time again now that
+				// we connected again.
+				alreadyPrintedError = false;
 
-				} catch (IOException e) {
-					// The readerThread will die on its own if it already
-					// started.
-					if (!stop && !alreadyPrintedError) {
-						System.err.printf(
-								"%s: Error in connection. Trying to reconnect every %d seconds. Exception: %s%n",
-								log_tag, RECONNECT_TIME, e.getMessage());
-						// Don't print the error again if the server stays down.
-						alreadyPrintedError = true;
-					}
+			} catch (IOException e) {
+				// The readerThread will die on its own if it already
+				// started.
+				if (!stop && !alreadyPrintedError) {
+					System.err.printf("%s: Error in connection. Trying to reconnect every %d seconds. Exception: %s%n",
+							log_tag, RECONNECT_TIME, e.getMessage());
+					// Don't print the error again if the server stays down.
+					alreadyPrintedError = true;
 				}
-			} catch (InterruptedException e) {
-				System.err.printf("%s: Error while waiting for reader thread: %s%n", log_tag, e.getMessage());
 			}
 
 			// Properly shutdown the client connection.
@@ -111,7 +104,7 @@ public class BaseSocketClient<T extends BaseCommands<S, V>, S, V> implements Run
 	public void stopServer() {
 		if (stop)
 			return;
-		
+
 		stop = true;
 		if (commands != null)
 			commands.stop();
