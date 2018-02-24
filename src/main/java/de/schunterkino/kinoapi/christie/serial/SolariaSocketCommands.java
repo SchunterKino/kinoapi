@@ -5,6 +5,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -14,6 +15,7 @@ import de.schunterkino.kinoapi.sockets.BaseCommands;
 import de.schunterkino.kinoapi.sockets.CommandContainer;
 import de.schunterkino.kinoapi.websocket.WebSocketCommandException;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
+import de.schunterkino.kinoapi.websocket.messages.christie.SetChannelMessage;
 
 public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpdateReceiver, SolariaCommand> {
 
@@ -446,6 +448,35 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 				addCommand(SolariaCommand.GetPowerStatus);
 			} else
 				throw new WebSocketCommandException("Failed to power on the IMB. No connection to Christie projector.");
+			return true;
+		case "set_channel":
+			if (socket.isConnected()) {
+				SetChannelMessage setChannelMsg = gson.fromJson(message, SetChannelMessage.class);
+				if (setChannelMsg.getChannel() <= 0 || setChannelMsg.getChannel() >= ChannelType.values().length)
+					throw new WebSocketCommandException(
+							"Invalid projector channel: " + setChannelMsg.getChannel());
+				
+				// Get the right actual channel number.
+				ChannelType channel = ChannelType.values()[setChannelMsg.getChannel()];
+				int channelIndex = -1;
+				for (Entry<Integer, ChannelType> e : channelMapping.entrySet()) {
+					if (e.getValue() == channel) {
+						channelIndex = e.getKey();
+						break;
+					}
+				}
+				
+				// Someone fucked up here.
+				if (channelIndex == -1) {
+					System.err.printf("ChannelType is missing from channelMapping: %d%n", channel);
+					return true;
+				}
+				
+				addCommand(SolariaCommand.SetActiveChannel, channelIndex, UseResponse.IgnoreResponse);
+				addCommand(SolariaCommand.GetActiveChannel);
+			} else
+				throw new WebSocketCommandException(
+						"Failed to change active channel. No connection to Christie projector.");
 			return true;
 		}
 

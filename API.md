@@ -226,3 +226,14 @@ Open the douser.
 Close the douser.
  * `msg_type` - string: `projector`
  * `action` - string: `douser_close`
+
+#### Set active channel
+Change the active image source of the projector.
+This triggers a `channel_changed` notification on all connected clients when the channel actually got changed.
+ * `msg_type` - string: `projector`
+ * `action` - string: `set_channel`
+ * `channel` - int: The channel to change to encoded as:
+   * `1`: IMB Flat
+   * `2`: IMB Scope
+   * `3`: DVI A (PC) Flat
+   * `4`: DVI A (PC) Scope
