@@ -38,6 +38,7 @@ import de.schunterkino.kinoapi.App;
 import de.schunterkino.kinoapi.christie.ChristieCommand;
 import de.schunterkino.kinoapi.christie.ChristieSocketCommands;
 import de.schunterkino.kinoapi.christie.IChristieStatusUpdateReceiver;
+import de.schunterkino.kinoapi.christie.serial.ChannelType;
 import de.schunterkino.kinoapi.christie.serial.ISolariaSerialStatusUpdateReceiver;
 import de.schunterkino.kinoapi.christie.serial.LampState;
 import de.schunterkino.kinoapi.christie.serial.PowerState;
@@ -55,6 +56,7 @@ import de.schunterkino.kinoapi.sockets.BaseSerialPortClient;
 import de.schunterkino.kinoapi.sockets.BaseSocketClient;
 import de.schunterkino.kinoapi.websocket.messages.BaseMessage;
 import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
+import de.schunterkino.kinoapi.websocket.messages.christie.ActiveChannelChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.DouserChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.IMBConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.LampChangedMessage;
@@ -258,6 +260,8 @@ public class CinemaWebSocketServer extends WebSocketServer
 					solaria.getCommands().getLampStateChangedTimestamp(), solaria.getCommands().getCooldownTime())));
 
 			conn.send(gson.toJson(new DouserChangedMessage(solaria.getCommands().isDouserOpen())));
+			
+			conn.send(gson.toJson(new ActiveChannelChangedMessage(solaria.getCommands().getActiveChannel())));
 		}
 	}
 
@@ -425,6 +429,12 @@ public class CinemaWebSocketServer extends WebSocketServer
 	@Override
 	public void onDouserStateChanged(boolean isopen) {
 		DouserChangedMessage msg = new DouserChangedMessage(isopen);
+		broadcast(gson.toJson(msg));
+	}
+
+	@Override
+	public void onActiveChannelChanged(ChannelType channel) {
+		ActiveChannelChangedMessage msg = new ActiveChannelChangedMessage(channel);
 		broadcast(gson.toJson(msg));
 	}
 

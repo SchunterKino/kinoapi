@@ -13,6 +13,7 @@ When a websocket connection to the server on port 8641 is opened the server send
    * `power_changed` - Current power state of the projector.
    * `lamp_changed` - Current state of the lamp.
    * `douser_changed` - Current open state of the douser.
+   * `channel_changed` - Current active channel/image source.
 
 ## Message format
 Every message is encoded as a JSON object containing at least a `msg_type` and an `action` string attribute.
@@ -109,6 +110,17 @@ Sent when the douser was opened or closed.
  * `msg_type` - string: `projector`
  * `action` - string: `douser_changed`
  * `is_open` - boolean: True if the douser is open now, false if it's closed.
+
+#### Active channel changed
+Sent when the projector switched the active image source to a different channel.
+ * `msg_type` - string: `projector`
+ * `action` - string: `channel_changed`
+ * `channel` - int: The active channel encoded as:
+   * `0`: Unknown/other
+   * `1`: IMB Flat
+   * `2`: IMB Scope
+   * `3`: DVI A (PC) Flat
+   * `4`: DVI A (PC) Scope
 
 ## Client -> Server
 ### Dolby CP750 Audio

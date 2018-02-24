@@ -17,6 +17,7 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
 import de.schunterkino.kinoapi.App;
+import de.schunterkino.kinoapi.christie.serial.ChannelType;
 import de.schunterkino.kinoapi.christie.serial.ISolariaSerialStatusUpdateReceiver;
 import de.schunterkino.kinoapi.christie.serial.LampState;
 import de.schunterkino.kinoapi.christie.serial.PowerState;
@@ -249,5 +250,9 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver,
 
 	@Override
 	public void onSolariaDisconnected() {
+	}
+
+	@Override
+	public void onActiveChannelChanged(ChannelType channel) {
 	}
 }

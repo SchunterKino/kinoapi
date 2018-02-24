@@ -12,4 +12,6 @@ public interface ISolariaSerialStatusUpdateReceiver {
 	public void onLampStateChanged(LampState state, LampState oldState, Instant timestamp, Long cooldown);
 
 	public void onDouserStateChanged(boolean isopen);
+
+	public void onActiveChannelChanged(ChannelType channel);
 }

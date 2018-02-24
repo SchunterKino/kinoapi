@@ -3,6 +3,7 @@ package de.schunterkino.kinoapi.christie.serial;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,11 +19,12 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 
 	protected int UPDATE_INTERVAL = 1000;
 
+	private Pattern errorPattern;
+
 	// Power mode
 	// This list must match the PowerMode enum.
 	private static final List<Integer> powerModeNames = Arrays.asList(0, 1, 2, 3, 10, 11);
 	private Pattern powerModePattern;
-	private PowerMode oldPowerMode;
 	private PowerMode powerMode;
 
 	// Abstraction for clients.
@@ -42,8 +44,17 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 	private Pattern douserStatePattern;
 	private boolean douserOpen;
 
+	// Which image source is active?
+	private Pattern activeChannelPattern;
+	private int activeChannelIndex;
+	private ChannelType activeChannel;
+	private HashMap<Integer, ChannelType> channelMapping;
+
 	public SolariaSocketCommands() {
 		super();
+
+		// General pattern for errors with well-formed commands.
+		errorPattern = Pattern.compile("\\([0-9]+ [0-9]+ ERR([0-9]+) \"([^\"]+)\"\\)");
 
 		powerModePattern = Pattern.compile("\\(PWR!([0-9]+) \"([^\"]*)\"\\)");
 		powerMode = PowerMode.PowerOff;
@@ -59,8 +70,21 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		douserStatePattern = Pattern.compile("\\(SHU!([0-9]+)\\)");
 		douserOpen = false;
 
+		// Channels are only valid from 101-164.
+		// Initialize with an invalid number to know that we don't know yet.
+		activeChannelPattern = Pattern.compile("\\(CHA!([0-9]+)\\)");
+		activeChannelIndex = -1;
+		activeChannel = ChannelType.Unknown;
+
+		// Map internal channel number to readable enum.
+		channelMapping.put(101, ChannelType.IMB_Flat);
+		channelMapping.put(102, ChannelType.IMB_Scope);
+		channelMapping.put(109, ChannelType.DVIA_Flat);
+		channelMapping.put(110, ChannelType.DVIA_Scope);
+
 		watchCommand(SolariaCommand.GetPowerStatus);
 		watchCommand(SolariaCommand.GetDouserState);
+		watchCommand(SolariaCommand.GetActiveChannel);
 	}
 
 	@Override
@@ -87,6 +111,19 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 	protected boolean onReceiveCommandOutput(String input) {
 		boolean handled = false;
 		Matcher matcher;
+
+		// See if we got an error as response.
+		// Just handle and ignore the error message and move on to the next command in
+		// the queue.
+		matcher = errorPattern.matcher(input);
+		if (matcher.find()) {
+			// We expect to get errors when asking for the current channel while IMB is
+			// powered off.
+			if (getCurrentCommand().cmd != SolariaCommand.GetActiveChannel)
+				System.err.printf("Error response for command %s: %s%n", getCurrentCommand().cmd, matcher.group());
+			return true;
+		}
+
 		switch (getCurrentCommand().cmd) {
 		case GetPowerStatus:
 			// Parse the response
@@ -131,6 +168,18 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 				}
 			}
 			break;
+		case GetActiveChannel:
+			// Parse the response
+			matcher = activeChannelPattern.matcher(input);
+			// Wait until we get the desired response.
+			while (matcher.find()) {
+				String channel = matcher.group(1);
+				if (channel != null) {
+					updateActiveChannel(Integer.parseInt(channel));
+					handled = true;
+				}
+			}
+			break;
 		default:
 			handled = true;
 			break;
@@ -167,6 +216,10 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 
 	public boolean isDouserOpen() {
 		return douserOpen;
+	}
+
+	public ChannelType getActiveChannel() {
+		return activeChannel;
 	}
 
 	private void updateCooldownTimer(long cooldown) {
@@ -279,6 +332,36 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		}
 	}
 
+	private void updateActiveChannel(int channel) {
+		if (activeChannelIndex == channel)
+			return;
+
+		// (NAM+CALL?)
+		// 101 - Flat
+		// 102 - Scope
+		// 109 - DVI A Scaler Flat
+		// 110 - DVI A Scaler Scope
+		// 111 - DVI B Flat
+		// 112 - DVI B Scope
+		activeChannelIndex = channel;
+
+		// See which channel this is and map it to our enum.
+		activeChannel = channelMapping.get(channel);
+		// Any other channel not in our enum is just unknown.
+		if (activeChannel == null)
+			activeChannel = ChannelType.Unknown;
+
+		// TODO: Get name of the channel using (NAM+C1XX?) or cache all names using
+		// (NAM+CALL?)
+
+		// Notify listeners.
+		synchronized (listeners) {
+			for (ISolariaSerialStatusUpdateReceiver listener : listeners) {
+				listener.onActiveChannelChanged(activeChannel);
+			}
+		}
+	}
+
 	@Override
 	protected String getCommandString(CommandContainer<SolariaCommand> cmd) {
 		String command = null;
@@ -297,6 +380,12 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			break;
 		case SetDouserState:
 			command = "(SHU " + cmd.value + ")";
+			break;
+		case GetActiveChannel:
+			command = "(CHA?)";
+			break;
+		case SetActiveChannel:
+			command = "(CHA " + cmd.value + ")";
 			break;
 		}
 		return command;
@@ -336,8 +425,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			if (socket.isConnected()) {
 				addCommand(SolariaCommand.SetPowerStatus, PowerMode.LampOff.ordinal(), UseResponse.IgnoreResponse);
 				addCommand(SolariaCommand.GetPowerStatus);
-			}
-			else
+			} else
 				throw new WebSocketCommandException("Failed to turn lamp off. No connection to Christie projector.");
 			return true;
 		case "power_off":
