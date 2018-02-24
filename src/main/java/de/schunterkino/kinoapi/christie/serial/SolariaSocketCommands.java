@@ -57,7 +57,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		// General pattern for errors with well-formed commands.
 		errorPattern = Pattern.compile("\\([0-9]+ [0-9]+ ERR([0-9]+) \"([^\"]+)\"\\)");
 
-		powerModePattern = Pattern.compile("\\(PWR!([0-9]+) \"([^\"]*)\"\\)");
+		powerModePattern = Pattern.compile("\\(PWR\\+STAT!([0-9]+) \"([^\"]*)\"\\)");
 		powerMode = PowerMode.PowerOff;
 
 		powerState = PowerState.Off;
@@ -364,7 +364,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		String command = null;
 		switch (cmd.cmd) {
 		case GetPowerStatus:
-			command = "(PWR?)";
+			command = "(PWR+STAT?)";
 			break;
 		case GetCooldownTimer:
 			command = "(PWR+COOL?)";
