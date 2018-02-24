@@ -88,7 +88,7 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements IW
 			do {
 				// We're waiting on a response for that command. See if there's
 				// something here.
-				if (currentCommand.cmd != null && !currentCommand.ignoreResponse && !ignoreResponses) {
+				if (isWaitingForResponse()) {
 					String ret = read();
 					// Nothing yet. Keep waiting.
 					if (ret == null)
@@ -113,6 +113,7 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements IW
 
 				// See if someone wanted to send some command.
 				currentCommand = noneCommand;
+				boolean queueEmpty;
 				synchronized (commandQueue) {
 					if (!commandQueue.isEmpty()) {
 						currentCommand = commandQueue.removeFirst();
@@ -132,17 +133,20 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements IW
 						if (!commandQueue.isEmpty())
 							currentCommand = commandQueue.removeFirst();
 					}
+					
+					queueEmpty = commandQueue.isEmpty();
 				}
 
 				// Send the right command now.
 				String command = null;
-				if (currentCommand.cmd != null)
+				if (currentCommand.cmd != null) {
 					command = getCommandString(currentCommand);
 
-				// Update the timestamp of when we last executed this command if
-				// it's one of the repeating ones.
-				if (isRepeatingCommand(currentCommand.cmd))
-					updateCommands.put(currentCommand.cmd, Instant.now());
+					// Update the timestamp of when we last executed this command if
+					// it's one of the repeating ones.
+					if (isRepeatingCommand(currentCommand.cmd))
+						updateCommands.put(currentCommand.cmd, Instant.now());
+				}
 
 				// Send the command in the correct format if we want to send
 				// something.
@@ -153,8 +157,11 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements IW
 						System.out.printf("%s: Sent: %s%n", LOG_TAG, command);
 				}
 
-				// Wait a bit until processing the next command.
-				Thread.sleep(500);
+				// Wait a bit until checking if there is a new command.
+				// Check for the response right away if we expect one though.
+				if (!isWaitingForResponse() && queueEmpty)
+					Thread.sleep(500);
+
 			} while (!stop);
 		} catch (IOException | InterruptedException e) {
 			if (!stop) {
@@ -175,6 +182,15 @@ public abstract class BaseCommands<ListenerInterface, CommandEnum> implements IW
 		}
 
 		onSocketDisconnected();
+	}
+
+	/**
+	 * Checks if we sent a command and are waiting for the response.
+	 * 
+	 * @return True if we're waiting for a response on a command, false otherwise.
+	 */
+	private boolean isWaitingForResponse() {
+		return currentCommand.cmd != null && !currentCommand.ignoreResponse && !ignoreResponses;
 	}
 
 	protected abstract void onSocketConnected();
