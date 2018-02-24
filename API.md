@@ -2,18 +2,18 @@
 
 When a websocket connection to the server on port 8641 is opened the server sends messages about the current status of the system right away, namely:
 
- * `volume`:`connection` - Indicate if the audio processor is available.
-   * `volume_changed` - Current volume level. *Only sent if the Dolby connection is available.*
-   * `mute_status_changed` - Current mute status. *Only sent if the Dolby connection is available.*
-   * `input_mode_changed` - Current active input mode. *Only sent if the Dolby connection is available.*
-   * `decode_mode_changed` - Current active decode mode for Digital 1 input. *Only sent if the Dolby connection is available.*
- * `lights`:`connection` - Indicate if the Jnior connection for light regulation is available.
- * `playback`:`connection` - Indicate if the Christie IMB connection for playback control is available.
- * `projector`:`connection` - Indicate if the serial connection to the Christie PIB for projector control is available.
-   * `power_changed` - Current power state of the projector.
-   * `lamp_changed` - Current state of the lamp.
-   * `douser_changed` - Current open state of the douser.
-   * `channel_changed` - Current active channel/image source.
+ * [`volume`:`connection`](#dolby-cp750-audio) - Indicate if the audio processor is available.
+   * [`volume_changed`](#volume-changed-notification) - Current volume level. *Only sent if the Dolby connection is available.*
+   * [`mute_status_changed`](#mute-status-changed-notification) - Current mute status. *Only sent if the Dolby connection is available.*
+   * [`input_mode_changed`](#input-mode-changed-notification) - Current active input mode. *Only sent if the Dolby connection is available.*
+   * [`decode_mode_changed`](#decode-mode-changed-notification) - Current active decode mode for Digital 1 input. *Only sent if the Dolby connection is available.*
+ * [`lights`:`connection`](#integ-jnior-310) - Indicate if the Jnior connection for light regulation is available.
+ * [`playback`:`connection`](#christie-imb-s2) - Indicate if the Christie IMB connection for playback control is available.
+ * [`projector`:`connection`](#christie-solaria-pib) - Indicate if the serial connection to the Christie PIB for projector control is available.
+   * [`power_changed`](#imb-power-state-changed) - Current power state of the projector.
+   * [`lamp_changed`](#lamp-turned-on-or-off) - Current state of the lamp.
+   * [`douser_changed`](#douser-opened-or-closed) - Current open state of the douser.
+   * [`channel_changed`](#active-channel-changed) - Current active channel/image source.
 
 ## Message format
 Every message is encoded as a JSON object containing at least a `msg_type` and an `action` string attribute.
