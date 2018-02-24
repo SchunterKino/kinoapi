@@ -292,6 +292,10 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			return;
 		}
 
+		// The state didn't change (like PowerOff and LampOff still off)
+		if (lampState == oldLampState)
+			return;
+
 		this.oldLampState = oldLampState;
 		lampStateChangedTimestamp = Instant.now();
 
