@@ -253,18 +253,25 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 		// Tell which part of the projector is currently enabled.
 		conn.send(gson.toJson(new PIBConnectionMessage(solaria.isConnected())));
 		if (solaria.isConnected()) {
-			conn.send(gson.toJson(new PowerChangedMessage(solaria.getCommands().getPowerState(),
-					solaria.getCommands().getPowerStateChangedTimestamp())));
+			if (solaria.getCommands().getPowerStateChangedTimestamp() != null) {
+				conn.send(gson.toJson(new PowerChangedMessage(solaria.getCommands().getPowerState(),
+						solaria.getCommands().getPowerStateChangedTimestamp())));
+			}
 
-			conn.send(gson.toJson(new LampChangedMessage(solaria.getCommands().getLampState(),
-					solaria.getCommands().getLampStateChangedTimestamp(), solaria.getCommands().getCooldownTime())));
+			if (solaria.getCommands().getLampStateChangedTimestamp() != null) {
+				conn.send(gson.toJson(new LampChangedMessage(solaria.getCommands().getLampState(),
+						solaria.getCommands().getLampStateChangedTimestamp(),
+						solaria.getCommands().getCooldownTime())));
+			}
 
 			conn.send(gson.toJson(new DouserChangedMessage(solaria.getCommands().isDouserOpen())));
 
 			conn.send(gson.toJson(new ActiveChannelChangedMessage(solaria.getCommands().getActiveChannel())));
 
-			conn.send(gson.toJson(new IngestStateChangedMessage(solaria.getCommands().isIngesting(),
-					solaria.getCommands().getIngestStateChangedTimestamp())));
+			if (solaria.getCommands().getIngestStateChangedTimestamp() != null) {
+				conn.send(gson.toJson(new IngestStateChangedMessage(solaria.getCommands().isIngesting(),
+						solaria.getCommands().getIngestStateChangedTimestamp())));
+			}
 		}
 	}
 

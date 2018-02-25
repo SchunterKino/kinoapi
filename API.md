@@ -87,7 +87,6 @@ Sent when the Christie Projector for projector control gets connected or disconn
 
 #### IMB power state changed
 Sent when the IMB turned on or off.
-The `timestamp` field might be missing if we never got any information from the projector since the app started.
  * `msg_type` - string: `projector`
  * `action` - string: `power_changed`
  * `state` - int: The state of the IMB encoded as:
@@ -99,7 +98,6 @@ The `timestamp` field might be missing if we never got any information from the 
 #### Lamp turned on or off
 Sent when the lamp turned on or off.
 The lamp is still cooling if `is_on` is false and the `cooldown` field exists. The `cooldown` field is omitted if the lamp isn't being cooled.
-The `timestamp` field might be missing if we never got any information from the projector since the app started.
  * `msg_type` - string: `projector`
  * `action` - string: `lamp_changed`
  * `is_on` - boolean: True if the lamp is shining bright, false if it's off.
@@ -125,7 +123,6 @@ Sent when the projector switched the active image source to a different channel.
 
 #### Ingesting content started or finished
 Sent when the IMB starts or stops ingesting content to the NAS.
-The `timestamp` field might be missing if we never got any information from the projector since the app started.
  * `msg_type` - string: `projector`
  * `action` - string: `ingest_state_changed`
  * `is_ingesting` - boolean: True if the IMB is ingesting something, false otherwise.
