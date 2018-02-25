@@ -312,6 +312,9 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			addCommand(SolariaCommand.GetCooldownTimer);
 			return;
 		}
+		
+		// Reset cooldown time now that it's irrelevant.
+		cooldownTime = null;
 
 		// Notify listeners.
 		synchronized (listeners) {
