@@ -227,7 +227,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		// Notify listeners.
 		synchronized (listeners) {
 			for (ISolariaSerialStatusUpdateReceiver listener : listeners) {
-				listener.onLampStateChanged(lampState, oldLampState, lampStateChangedTimestamp, cooldown);
+				listener.onLampStateChanged(lampState, oldLampState, lampStateChangedTimestamp, cooldownTime);
 			}
 		}
 	}
@@ -247,6 +247,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 	}
 
 	private void handlePowerStateChange() {
+		PowerState oldPowerState = powerState;
 		switch (powerMode) {
 		case PowerOff:
 			powerState = PowerState.Off;
@@ -261,6 +262,10 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			// Not a state we care about here.
 			return;
 		}
+
+		// Don't notify anyone if the state didn't really change for us.
+		if (powerState == oldPowerState)
+			return;
 
 		// Reset cooldown time now that it's irrelevant.
 		cooldownTime = null;
