@@ -146,7 +146,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			while (matcher.find()) {
 				String cooldown = matcher.group(1);
 				if (cooldown != null) {
-					updateCooldownTimer(Integer.parseInt(cooldown));
+					updateCooldownTimer(Long.parseLong(cooldown));
 					handled = true;
 				}
 			}
@@ -217,7 +217,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		return activeChannel;
 	}
 
-	private void updateCooldownTimer(long cooldown) {
+	private void updateCooldownTimer(Long cooldown) {
 		// Don't inform if the status didn't change.
 		if (cooldownTime == cooldown)
 			return;
