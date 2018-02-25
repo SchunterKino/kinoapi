@@ -59,6 +59,7 @@ import de.schunterkino.kinoapi.websocket.messages.ErrorMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.ActiveChannelChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.DouserChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.IMBConnectionMessage;
+import de.schunterkino.kinoapi.websocket.messages.christie.IngestStateChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.LampChangedMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.PIBConnectionMessage;
 import de.schunterkino.kinoapi.websocket.messages.christie.PowerChangedMessage;
@@ -80,9 +81,8 @@ import io.jsonwebtoken.impl.TextCodec;
  * 
  * @see API.md
  */
-public class CinemaWebSocketServer extends WebSocketServer
-		implements IDolbyStatusUpdateReceiver, IJniorStatusUpdateReceiver, IChristieStatusUpdateReceiver,
-		ISolariaSerialStatusUpdateReceiver {
+public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStatusUpdateReceiver,
+		IJniorStatusUpdateReceiver, IChristieStatusUpdateReceiver, ISolariaSerialStatusUpdateReceiver {
 
 	// Close the websocket if there are problems with the token.
 	public static final int AUTH_INVALID_TOKEN_ERROR_CODE = 4401;
@@ -260,8 +260,11 @@ public class CinemaWebSocketServer extends WebSocketServer
 					solaria.getCommands().getLampStateChangedTimestamp(), solaria.getCommands().getCooldownTime())));
 
 			conn.send(gson.toJson(new DouserChangedMessage(solaria.getCommands().isDouserOpen())));
-			
+
 			conn.send(gson.toJson(new ActiveChannelChangedMessage(solaria.getCommands().getActiveChannel())));
+
+			conn.send(gson.toJson(new IngestStateChangedMessage(solaria.getCommands().isIngesting(),
+					solaria.getCommands().getIngestStateChangedTimestamp())));
 		}
 	}
 
@@ -435,6 +438,12 @@ public class CinemaWebSocketServer extends WebSocketServer
 	@Override
 	public void onActiveChannelChanged(ChannelType channel) {
 		ActiveChannelChangedMessage msg = new ActiveChannelChangedMessage(channel);
+		broadcast(gson.toJson(msg));
+	}
+
+	@Override
+	public void onIngestStatusChanged(boolean ingested, Instant timestamp) {
+		IngestStateChangedMessage msg = new IngestStateChangedMessage(ingested, timestamp);
 		broadcast(gson.toJson(msg));
 	}
 

@@ -255,4 +255,8 @@ public class AudioPlayer implements LineListener, IDolbyStatusUpdateReceiver,
 	@Override
 	public void onActiveChannelChanged(ChannelType channel) {
 	}
+
+	@Override
+	public void onIngestStatusChanged(boolean ingested, Instant timestamp) {
+	}
 }

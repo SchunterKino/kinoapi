@@ -14,6 +14,7 @@ When a websocket connection to the server on port 8641 is opened the server send
    * [`lamp_changed`](#lamp-turned-on-or-off) - Current state of the lamp.
    * [`douser_changed`](#douser-opened-or-closed) - Current open state of the douser.
    * [`channel_changed`](#active-channel-changed) - Current active channel/image source.
+   * [`ingest_state_changed`](#ingesting-content-started-or-finished) - Current state of content ingestion into the IMB.
 
 ## Message format
 Every message is encoded as a JSON object containing at least a `msg_type` and an `action` string attribute.
@@ -121,6 +122,14 @@ Sent when the projector switched the active image source to a different channel.
    * `2`: IMB Scope
    * `3`: DVI A (PC) Flat
    * `4`: DVI A (PC) Scope
+
+#### Ingesting content started or finished
+Sent when the IMB starts or stops ingesting content to the NAS.
+The `timestamp` field might be missing if we never got any information from the projector since the app started.
+ * `msg_type` - string: `projector`
+ * `action` - string: `ingest_state_changed`
+ * `is_ingesting` - boolean: True if the IMB is ingesting something, false otherwise.
+ * `timestamp` - string: ISO 8601 formated point in time of when the ingestion state change was observed.
 
 ## Client -> Server
 ### Dolby CP750 Audio

@@ -51,6 +51,10 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 	// This list must match the ChannelType enum.
 	private static final List<Integer> channelMapping = Arrays.asList(-1, 101, 102, 109, 110);
 
+	private Pattern ingestStatePattern;
+	private boolean isIngesting;
+	private Instant ingsetStateChangedTimestamp;
+
 	public SolariaSocketCommands() {
 		super();
 
@@ -77,9 +81,14 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		activeChannelIndex = -1;
 		activeChannel = ChannelType.Unknown;
 
+		ingestStatePattern = Pattern.compile("\\(PWR\\+IGST!([0-9]+)\\)");
+		isIngesting = false;
+		ingsetStateChangedTimestamp = null;
+
 		watchCommand(SolariaCommand.GetPowerStatus);
 		watchCommand(SolariaCommand.GetDouserState);
 		watchCommand(SolariaCommand.GetActiveChannel);
+		watchCommand(SolariaCommand.GetIngestState);
 	}
 
 	@Override
@@ -175,6 +184,18 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 				}
 			}
 			break;
+		case GetIngestState:
+			// Parse the response
+			matcher = ingestStatePattern.matcher(input);
+			// Wait until we get the desired response.
+			while (matcher.find()) {
+				String ingesting = matcher.group(1);
+				if (ingesting != null) {
+					updateIngestState(Integer.parseInt(ingesting) == 1);
+					handled = true;
+				}
+			}
+			break;
 		default:
 			handled = true;
 			break;
@@ -215,6 +236,14 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 
 	public ChannelType getActiveChannel() {
 		return activeChannel;
+	}
+
+	public boolean isIngesting() {
+		return isIngesting;
+	}
+
+	public Instant getIngestStateChangedTimestamp() {
+		return ingsetStateChangedTimestamp;
 	}
 
 	private void updateCooldownTimer(Long cooldown) {
@@ -318,7 +347,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			addCommand(SolariaCommand.GetCooldownTimer);
 			return;
 		}
-		
+
 		// Reset cooldown time now that it's irrelevant.
 		cooldownTime = null;
 
@@ -377,6 +406,21 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		}
 	}
 
+	private void updateIngestState(boolean ingesting) {
+		if (isIngesting == ingesting)
+			return;
+
+		isIngesting = ingesting;
+		ingsetStateChangedTimestamp = Instant.now();
+
+		// Notify listeners.
+		synchronized (listeners) {
+			for (ISolariaSerialStatusUpdateReceiver listener : listeners) {
+				listener.onIngestStatusChanged(isIngesting, ingsetStateChangedTimestamp);
+			}
+		}
+	}
+
 	@Override
 	protected String getCommandString(CommandContainer<SolariaCommand> cmd) {
 		String command = null;
@@ -401,6 +445,9 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			break;
 		case SetActiveChannel:
 			command = "(CHA " + cmd.value + ")";
+			break;
+		case GetIngestState:
+			command = "(PWR+IGST?)";
 			break;
 		}
 		return command;
@@ -445,6 +492,9 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			return true;
 		case "power_off":
 			if (socket.isConnected()) {
+				if (isIngesting())
+					throw new WebSocketCommandException("The IMB is currently ingesting content.");
+
 				addCommand(SolariaCommand.SetPowerStatus, PowerMode.PowerOff.ordinal(), UseResponse.IgnoreResponse);
 				addCommand(SolariaCommand.GetPowerStatus);
 			} else

@@ -14,4 +14,6 @@ public interface ISolariaSerialStatusUpdateReceiver {
 	public void onDouserStateChanged(boolean isopen);
 
 	public void onActiveChannelChanged(ChannelType channel);
+	
+	public void onIngestStatusChanged(boolean ingested, Instant timestamp);
 }
