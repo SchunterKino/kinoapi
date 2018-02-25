@@ -301,6 +301,12 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		if (lampState == oldLampState)
 			return;
 
+		// Can't change from On to Off without cooling the lamp.
+		// The projector switches the state prematurely and changes to "Cooling"
+		// right after. Ignore the first message and wait for the "Cooling" one instead.
+		if (lampState == LampState.Off && oldLampState == LampState.On)
+			return;
+
 		this.oldLampState = oldLampState;
 		lampStateChangedTimestamp = Instant.now();
 
