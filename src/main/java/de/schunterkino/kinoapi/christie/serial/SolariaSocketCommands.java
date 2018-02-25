@@ -23,7 +23,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 
 	// Power mode
 	// This list must match the PowerMode enum.
-	private static final List<Integer> powerModeNames = Arrays.asList(-1, 0, 1, 2, 3, 10, 11);
+	private static final List<Integer> powerModeNames = Arrays.asList(0, 1, 2, 3, 10, 11, -1);
 	private Pattern powerModePattern;
 	private PowerMode powerMode;
 
