@@ -23,7 +23,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 
 	// Power mode
 	// This list must match the PowerMode enum.
-	private static final List<Integer> powerModeNames = Arrays.asList(0, 1, 2, 3, 10, 11);
+	private static final List<Integer> powerModeNames = Arrays.asList(-1, 0, 1, 2, 3, 10, 11);
 	private Pattern powerModePattern;
 	private PowerMode powerMode;
 
@@ -62,7 +62,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		errorPattern = Pattern.compile("\\([0-9]+ [0-9]+ ERR([0-9]+) \"([^\"]+)\"\\)");
 
 		powerModePattern = Pattern.compile("\\(PWR\\+STAT!([0-9]+) \"([^\"]*)\"\\)");
-		powerMode = PowerMode.PowerOff;
+		powerMode = PowerMode.Unknown;
 
 		powerState = PowerState.Off;
 		powerStateChangedTimestamp = null;
@@ -285,6 +285,8 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 			powerState = PowerState.WarmingUp;
 			break;
 		case LampOff:
+		case InCoolDown:
+		case LampOn:
 			powerState = PowerState.On;
 			break;
 		default:
@@ -293,7 +295,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		}
 
 		// Don't notify anyone if the state didn't really change for us.
-		if (powerState == oldPowerState)
+		if (powerState == oldPowerState && powerStateChangedTimestamp != null)
 			return;
 
 		// Reset cooldown time now that it's irrelevant.
@@ -313,6 +315,8 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		LampState oldLampState = lampState;
 		switch (powerMode) {
 		case LampOff:
+		case PowerOff:
+		case InWarmUp:
 			lampState = LampState.Off;
 			break;
 		case InCoolDown:
@@ -327,7 +331,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 		}
 
 		// The state didn't change (like PowerOff and LampOff still off)
-		if (lampState == oldLampState)
+		if (lampState == oldLampState && lampStateChangedTimestamp != null)
 			return;
 
 		// Can't change from On to Off without cooling the lamp.
@@ -407,7 +411,7 @@ public class SolariaSocketCommands extends BaseCommands<ISolariaSerialStatusUpda
 	}
 
 	private void updateIngestState(boolean ingesting) {
-		if (isIngesting == ingesting)
+		if (isIngesting == ingesting && ingsetStateChangedTimestamp != null)
 			return;
 
 		isIngesting = ingesting;
