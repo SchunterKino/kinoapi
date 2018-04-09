@@ -287,9 +287,11 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 			// specific websocket
 			System.err.println("WebSocket: ChildSocket " + prettySocket(conn) + " error: " + ex.getMessage());
 		} else {
-			// TODO: Stop the application or try to start the server again in a
-			// bit.
+			// The port is probably already bound because someone started this server twice..
 			System.err.println("WebSocket: ServerSocket error: " + ex.getMessage());
+			
+			// Shutdown the App and let the wrapper script handle the restart.
+			System.exit(1);
 		}
 		if (!(ex instanceof IOException))
 			ex.printStackTrace();
