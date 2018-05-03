@@ -27,6 +27,7 @@ import javax.xml.bind.DatatypeConverter;
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.exceptions.InvalidDataException;
+import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.java_websocket.server.WebSocketServer;
@@ -233,45 +234,51 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 
 		// Inform the new client of the current status.
 
-		// Let the client know if we were able to connect to the Dolby audio
-		// processor.
-		conn.send(gson.toJson(new DolbyConnectionMessage(dolby.isConnected())));
-		if (dolby.isConnected()) {
-			// If we're connected, send the current status too.
-			conn.send(gson.toJson(new VolumeChangedMessage(dolby.getCommands().getVolume())));
-			conn.send(gson.toJson(new MuteStatusChangedMessage(dolby.getCommands().isMuted())));
-			conn.send(gson.toJson(new InputModeChangedMessage(dolby.getCommands().getInputMode())));
-			conn.send(gson.toJson(new DecodeModeChangedMessage(dolby.getCommands().getDecodeMode())));
-		}
-
-		// Also tell the client if we have a connection to the Jnior box.
-		conn.send(gson.toJson(new LightsConnectionMessage(jnior.isConnected())));
-
-		// And if the projector is up.
-		conn.send(gson.toJson(new IMBConnectionMessage(christie.isConnected())));
-
-		// Tell which part of the projector is currently enabled.
-		conn.send(gson.toJson(new PIBConnectionMessage(solaria.isConnected())));
-		if (solaria.isConnected()) {
-			if (solaria.getCommands().getPowerStateChangedTimestamp() != null) {
-				conn.send(gson.toJson(new PowerChangedMessage(solaria.getCommands().getPowerState(),
-						solaria.getCommands().getPowerStateChangedTimestamp())));
+		try {
+			// Let the client know if we were able to connect to the Dolby audio
+			// processor.
+			conn.send(gson.toJson(new DolbyConnectionMessage(dolby.isConnected())));
+			if (dolby.isConnected()) {
+				// If we're connected, send the current status too.
+				conn.send(gson.toJson(new VolumeChangedMessage(dolby.getCommands().getVolume())));
+				conn.send(gson.toJson(new MuteStatusChangedMessage(dolby.getCommands().isMuted())));
+				conn.send(gson.toJson(new InputModeChangedMessage(dolby.getCommands().getInputMode())));
+				conn.send(gson.toJson(new DecodeModeChangedMessage(dolby.getCommands().getDecodeMode())));
 			}
 
-			if (solaria.getCommands().getLampStateChangedTimestamp() != null) {
-				conn.send(gson.toJson(new LampChangedMessage(solaria.getCommands().getLampState(),
-						solaria.getCommands().getLampStateChangedTimestamp(),
-						solaria.getCommands().getCooldownTime())));
+			// Also tell the client if we have a connection to the Jnior box.
+			conn.send(gson.toJson(new LightsConnectionMessage(jnior.isConnected())));
+
+			// And if the projector is up.
+			conn.send(gson.toJson(new IMBConnectionMessage(christie.isConnected())));
+
+			// Tell which part of the projector is currently enabled.
+			conn.send(gson.toJson(new PIBConnectionMessage(solaria.isConnected())));
+			if (solaria.isConnected()) {
+				if (solaria.getCommands().getPowerStateChangedTimestamp() != null) {
+					conn.send(gson.toJson(new PowerChangedMessage(solaria.getCommands().getPowerState(),
+							solaria.getCommands().getPowerStateChangedTimestamp())));
+				}
+
+				if (solaria.getCommands().getLampStateChangedTimestamp() != null) {
+					conn.send(gson.toJson(new LampChangedMessage(solaria.getCommands().getLampState(),
+							solaria.getCommands().getLampStateChangedTimestamp(),
+							solaria.getCommands().getCooldownTime())));
+				}
+
+				conn.send(gson.toJson(new DouserChangedMessage(solaria.getCommands().isDouserOpen())));
+
+				conn.send(gson.toJson(new ActiveChannelChangedMessage(solaria.getCommands().getActiveChannel())));
+
+				if (solaria.getCommands().getIngestStateChangedTimestamp() != null) {
+					conn.send(gson.toJson(new IngestStateChangedMessage(solaria.getCommands().isIngesting(),
+							solaria.getCommands().getIngestStateChangedTimestamp())));
+				}
 			}
-
-			conn.send(gson.toJson(new DouserChangedMessage(solaria.getCommands().isDouserOpen())));
-
-			conn.send(gson.toJson(new ActiveChannelChangedMessage(solaria.getCommands().getActiveChannel())));
-
-			if (solaria.getCommands().getIngestStateChangedTimestamp() != null) {
-				conn.send(gson.toJson(new IngestStateChangedMessage(solaria.getCommands().isIngesting(),
-						solaria.getCommands().getIngestStateChangedTimestamp())));
-			}
+		} catch (WebsocketNotConnectedException e) {
+			// Websocket disconnected while we're in the middle of sending the current
+			// state.
+			// Just drop the connection.
 		}
 	}
 
@@ -287,9 +294,10 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 			// specific websocket
 			System.err.println("WebSocket: ChildSocket " + prettySocket(conn) + " error: " + ex.getMessage());
 		} else {
-			// The port is probably already bound because someone started this server twice..
+			// The port is probably already bound because someone started this server
+			// twice..
 			System.err.println("WebSocket: ServerSocket error: " + ex.getMessage());
-			
+
 			// Shutdown the App and let the wrapper script handle the restart.
 			System.exit(1);
 		}
