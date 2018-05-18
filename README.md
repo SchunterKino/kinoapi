@@ -1,6 +1,8 @@
 # kinoapi
 Connects with the cinema hardware and provides a websocket interface to manage them.
 
+[![Build Status](https://travis-ci.org/SchunterKino/kinoapi.svg?branch=master)](https://travis-ci.org/SchunterKino/kinoapi)
+
 Talks to:
  * Christie Solaria One+
  * Dolby CP750
