@@ -26,9 +26,12 @@ import javax.net.ssl.SSLContext;
 import javax.xml.bind.DatatypeConverter;
 
 import org.java_websocket.WebSocket;
+import org.java_websocket.drafts.Draft;
 import org.java_websocket.exceptions.InvalidDataException;
 import org.java_websocket.exceptions.WebsocketNotConnectedException;
+import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
+import org.java_websocket.handshake.ServerHandshakeBuilder;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.java_websocket.server.WebSocketServer;
 
@@ -219,11 +222,30 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 	}
 
 	@Override
+	public ServerHandshakeBuilder onWebsocketHandshakeReceivedAsServer( WebSocket conn, Draft draft, ClientHandshake request) throws InvalidDataException {
+		ServerHandshakeBuilder builder = super.onWebsocketHandshakeReceivedAsServer( conn, draft, request );
+		
+		// Make sure the connection comes from our expected origin.
+		if (!request.hasFieldValue("Origin"))
+			throw new InvalidDataException(CloseFrame.POLICY_VALIDATION, "Invalid Origin header.");
+		
+		String origin = request.getFieldValue("Origin");
+		if (!App.getConfigurationString("http_origin").equals(origin)) {
+			System.err.println("WebSocket: " + prettySocket(conn) + " invalid Origin header: " + origin);
+			throw new InvalidDataException(CloseFrame.POLICY_VALIDATION, "Invalid Origin header.");
+		}
+		
+		return builder;
+	}
+	
+	@Override
 	public void onOpen(WebSocket conn, ClientHandshake handshake) {
 		System.out.println("WebSocket: " + prettySocket(conn) + " connected!");
 
 		// Try to validate the token in the handshake cookie.
 		// Close the connection correctly if there's a problem.
+		// Need to do this after the websocket connection is established.
+		// Rejecting the handshake doesn't give the client any details why the session was rejected.
 		try {
 			validateToken(handshake);
 		} catch (InvalidDataException e) {
