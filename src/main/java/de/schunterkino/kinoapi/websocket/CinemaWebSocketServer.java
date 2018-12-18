@@ -229,9 +229,10 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 		if (!request.hasFieldValue("Origin"))
 			throw new InvalidDataException(CloseFrame.POLICY_VALIDATION, "Invalid Origin header.");
 		
+		String expectedOrigin = App.getConfigurationString("http_origin");
 		String origin = request.getFieldValue("Origin");
-		if (!App.getConfigurationString("http_origin").equals(origin)) {
-			System.err.println("WebSocket: " + prettySocket(conn) + " invalid Origin header: " + origin);
+		if (!origin.equals(expectedOrigin)) {
+			System.err.printf("WebSocket: %s invalid Origin header: \"%s\" (expected: \"%s\")%n", prettySocket(conn), origin, expectedOrigin);
 			throw new InvalidDataException(CloseFrame.POLICY_VALIDATION, "Invalid Origin header.");
 		}
 		
