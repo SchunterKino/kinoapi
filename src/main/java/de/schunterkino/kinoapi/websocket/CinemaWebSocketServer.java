@@ -75,7 +75,7 @@ import de.schunterkino.kinoapi.websocket.messages.volume.MuteStatusChangedMessag
 import de.schunterkino.kinoapi.websocket.messages.volume.VolumeChangedMessage;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.impl.TextCodec;
+import io.jsonwebtoken.io.Decoders;
 
 /**
  * WebSocket server class which serves the documented JSON API. This class acts
@@ -208,7 +208,7 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 		// because.
 		try {
 			Jwts.parser().requireSubject("SchunterKinoRemote")
-					.setSigningKey(TextCodec.BASE64.decode(App.getConfigurationString("jws_signature_key")))
+					.setSigningKey(Decoders.BASE64.decode(App.getConfigurationString("jws_signature_key")))
 					.parseClaimsJws(compactJws);
 		} catch (ExpiredJwtException e) {
 			System.err.println("Expired! " + e.getMessage());
