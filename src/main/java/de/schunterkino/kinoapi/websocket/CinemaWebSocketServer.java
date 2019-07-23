@@ -17,13 +17,13 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
-import javax.xml.bind.DatatypeConverter;
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.drafts.Draft;
@@ -530,7 +530,7 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 		String data = new String(pem);
 		String[] tokens = data.split(beginDelimiter);
 		tokens = tokens[1].split(endDelimiter);
-		return DatatypeConverter.parseBase64Binary(tokens[0]);
+		return Base64.getMimeDecoder().decode(tokens[0]);
 	}
 
 	private RSAPrivateKey generatePrivateKeyFromDER(byte[] keyBytes)
