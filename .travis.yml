@@ -3,6 +3,6 @@ language: java
 script: mvn clean package
 
 jdk:
-  - oraclejdk8
-  - oraclejdk9
   - openjdk8
+  - openjdk10
+  - openjdk11
