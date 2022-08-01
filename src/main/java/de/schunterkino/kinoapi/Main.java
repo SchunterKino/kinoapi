@@ -83,7 +83,7 @@ public class Main {
 		if (websocketServer != null) {
 			try {
 				websocketServer.stop();
-			} catch (IOException | InterruptedException e) {
+			} catch (InterruptedException e) {
 				// We want to stop anyways. Errors are ok.
 			}
 			websocketServer = null;
