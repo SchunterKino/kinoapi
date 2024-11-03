@@ -22,10 +22,12 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: maven
-    - uses: actions/checkout@v4
+    - name: Clone nyholku/purejavacomm
+      uses: actions/checkout@v4
       with:
         repository: 'nyholku/purejavacomm'
         ref: 'dafb39722f797289b84b11e0184ef896f1f76c1e'
+        path: 'purejavacomm'
     - name: Install purejavacomm
       working-directory: purejavacomm
       run: mvn install -DskipTests=true
