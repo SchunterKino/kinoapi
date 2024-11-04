@@ -1,7 +1,7 @@
 # kinoapi
 Connects with the cinema hardware and provides a websocket interface to manage them.
 
-[![Build Status](https://travis-ci.org/SchunterKino/kinoapi.svg?branch=master)](https://travis-ci.org/SchunterKino/kinoapi)
+![Build Status](https://github.com/SchunterKino/kinoapi/actions/workflows/maven.yml/badge.svg)
 
 Talks to:
  * Christie Solaria One+
