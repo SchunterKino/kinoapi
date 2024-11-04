@@ -9,11 +9,11 @@ import java.net.InetSocketAddress;
 import java.security.KeyFactory;
 import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Instant;
@@ -507,14 +507,14 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 					"-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----");
 
 			X509Certificate cert = generateCertificateFromDER(certBytes);
-			RSAPrivateKey key = generatePrivateKeyFromDER(keyBytes);
+			PrivateKey key = generatePrivateKeyFromDER(keyBytes);
 
 			KeyStore keystore = KeyStore.getInstance("JKS");
 			keystore.load(null);
 			keystore.setCertificateEntry("cert-alias", cert);
 			keystore.setKeyEntry("key-alias", key, password.toCharArray(), new Certificate[] { cert });
 
-			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+			KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
 			kmf.init(keystore, password.toCharArray());
 
 			KeyManager[] km = kmf.getKeyManagers();
@@ -523,6 +523,7 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 		} catch (Exception e) {
 			System.err.printf("Error initializing SSL certificate. Websocket Server WON'T support SSL. Exception: %s%n",
 					e.getMessage());
+			e.printStackTrace();
 			context = null;
 		}
 		return context;
@@ -535,13 +536,13 @@ public class CinemaWebSocketServer extends WebSocketServer implements IDolbyStat
 		return Base64.getMimeDecoder().decode(tokens[0]);
 	}
 
-	private RSAPrivateKey generatePrivateKeyFromDER(byte[] keyBytes)
+	private PrivateKey generatePrivateKeyFromDER(byte[] keyBytes)
 			throws InvalidKeySpecException, NoSuchAlgorithmException {
 		PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
 
-		KeyFactory factory = KeyFactory.getInstance("RSA");
+		KeyFactory factory = KeyFactory.getInstance("EC");
 
-		return (RSAPrivateKey) factory.generatePrivate(spec);
+		return factory.generatePrivate(spec);
 	}
 
 	private X509Certificate generateCertificateFromDER(byte[] certBytes) throws CertificateException {
