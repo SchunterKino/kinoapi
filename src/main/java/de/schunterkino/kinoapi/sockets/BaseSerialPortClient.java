@@ -1,6 +1,7 @@
 package de.schunterkino.kinoapi.sockets;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
 import purejavacomm.CommPort;
 import purejavacomm.CommPortIdentifier;
@@ -25,8 +26,8 @@ public class BaseSerialPortClient<T extends BaseCommands<S, V>, S, V> implements
 		this.log_tag = typeArgumentClass.getSimpleName();
 		this.serial = null;
 		try {
-			this.commands = typeArgumentClass.newInstance();
-		} catch (InstantiationException | IllegalAccessException e) {
+			this.commands = typeArgumentClass.getDeclaredConstructor().newInstance();
+		} catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
 			e.printStackTrace();
 		}
 		this.stop = false;

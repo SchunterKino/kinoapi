@@ -1,6 +1,7 @@
 package de.schunterkino.kinoapi.sockets;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -27,8 +28,8 @@ public class BaseSocketClient<T extends BaseCommands<S, V>, S, V> implements Run
 		this.socket = null;
 		try {
 			this.socketAddress = new InetSocketAddress(InetAddress.getByName(ip), port);
-			this.commands = typeArgumentClass.newInstance();
-		} catch (InstantiationException | IllegalAccessException | UnknownHostException e) {
+			this.commands = typeArgumentClass.getDeclaredConstructor().newInstance();
+		} catch (InstantiationException | IllegalAccessException | UnknownHostException | NoSuchMethodException | InvocationTargetException e) {
 			e.printStackTrace();
 		}
 		this.stop = false;
