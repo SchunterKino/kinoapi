@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Set up JDK 
       uses: actions/setup-java@v5
       with:
@@ -23,7 +23,7 @@ jobs:
         distribution: 'temurin'
         cache: maven
     - name: Clone nyholku/purejavacomm
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         repository: 'nyholku/purejavacomm'
         ref: 'dafb39722f797289b84b11e0184ef896f1f76c1e'
